@@ -1,25 +1,29 @@
 package com.txanalyzer;
 
+import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
-import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -29,302 +33,446 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/** Native startup splash + small centered key dialog; the key is an offline DEMO gate,
- * not a remote license or security system. Screen capture always requires user consent. */
+/**
+ * MinhQuan v0.6 — native Android UI prototype.
+ * Offline demo key only. No capture/OCR/betting/prediction functionality and no
+ * account server or password storage/transfer in this build.
+ */
 public class MainActivity extends Activity {
-    private static final int CAPTURE_REQUEST=222;
-    private static final int NOTIFICATION_REQUEST=223;
-    private static final long SPLASH_DURATION_MS=3000L;
-    private static final String DEMO_KEY="FreeKey_MinhQuan";
-    private static final int NAVY=Color.rgb(10,18,32);
-    private static final int LIGHT=Color.rgb(236,242,250);
-    private static final int SUBTLE=Color.rgb(161,177,199);
-    private static final int GOLD=Color.rgb(226,178,97);
-    private final Handler ui=new Handler(Looper.getMainLooper());
-    private final Runnable openLogin=()->{if(!isFinishing()&&!isDestroyed()){renderDashboard();showKeyDialog();}};
-    private ObjectAnimator spin;
-    private Dialog keyDialog;
-    private TextView status;
-    private MediaProjectionManager manager;
-    private boolean authenticated=false;
+    private static final String DEMO_KEY = "FreeKey_MinhQuan";
+    private static final String CHANNEL_ID = "minhquan_login";
+    private static final int REQUEST_NOTIFICATIONS = 40;
+    private static final long INTRO_MILLIS = 3000;
+    private static final int BG = 0xff080e19;
+    private static final int PANEL = 0xff142035;
+    private static final int BORDER = 0xff2a4152;
+    private static final int WHITE = 0xfff4f8fd;
+    private static final int MUTED = 0xff96abc2;
+    private static final int GREEN = 0xff42e6b2;
+    private static final int INPUT = 0xff0d1624;
+    private static final int DIALOG_BG = 0xff36312f;
 
-    private int dp(float value){return Math.round(getResources().getDisplayMetrics().density*value);}
-    private GradientDrawable rounded(int fill,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dp(radius));return d;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private Dialog keyDialog;
+    private ObjectAnimator avatarSpin;
+    private Runnable timerRunnable;
+    private Runnable introRunnable;
+    private long counterStarted;
+    private boolean keyAccepted = false;
+    private boolean notifyAfterPermission = false;
+    private boolean isDestroyedNow = false;
+
+    private int dp(float v) {
+        return (int) (getResources().getDisplayMetrics().density * v + 0.5f);
     }
-    private GradientDrawable outlined(int fill,int stroke,int radius){
-        GradientDrawable d=rounded(fill,radius);d.setStroke(dp(1),stroke);return d;
+
+    private GradientDrawable shape(int color, float radius) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radius));
+        return d;
     }
-    private TextView text(String content,float sp,int color){
-        TextView v=new TextView(this);v.setText(content);v.setTextSize(sp);v.setTextColor(color);return v;
+
+    private GradientDrawable outlined(int color, int stroke, float radius) {
+        GradientDrawable d = shape(color, radius);
+        d.setStroke(dp(1), stroke);
+        return d;
     }
-    private ImageView avatar(int sizeDp){
-        ImageView picture=new ImageView(this);
-        picture.setImageResource(R.drawable.minhquan_avatar);
-        picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        picture.setContentDescription("Avatar MinhQuan - mặt nạ xanh");
-        picture.setLayoutParams(new LinearLayout.LayoutParams(dp(sizeDp),dp(sizeDp)));
-        return picture;
+
+    private TextView text(String value, float size, int color) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextSize(size);
+        t.setTextColor(color);
+        return t;
     }
-    @Override public void onCreate(Bundle state){
+
+    private ImageView avatar(int size) {
+        ImageView image = new ImageView(this);
+        image.setImageResource(R.drawable.minhquan_avatar);
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        image.setContentDescription("Avatar mặt nạ xanh MinhQuan");
+        image.setLayoutParams(new LinearLayout.LayoutParams(dp(size), dp(size)));
+        return image;
+    }
+
+    @Override
+    public void onCreate(Bundle state) {
         super.onCreate(state);
-        manager=(MediaProjectionManager)getSystemService(MEDIA_PROJECTION_SERVICE);
-        if(state!=null && state.getBoolean("authenticated",false)){
-            authenticated=true;renderDashboard();return;
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
+        createNotificationChannel();
+        if (state != null && state.getBoolean("keyAccepted", false)) {
+            keyAccepted = true;
+            showAccountScreen();
+        } else {
+            showIntro();
+            introRunnable = () -> {
+                if (!isDestroyedNow && !isFinishing()) {
+                    stopAvatarSpin();
+                    showAccountScreen();
+                    showKeyDialog();
+                }
+            };
+            handler.postDelayed(introRunnable, INTRO_MILLIS);
         }
-        showSplash();
-        ui.postDelayed(openLogin,SPLASH_DURATION_MS);
     }
-    /** Small floating loading card matching the user's reference (within app, not over game).
-     * The 3-second timer is an intro animation, not a real network request. */
-    private void showSplash(){
-        FrameLayout root=new FrameLayout(this);
+
+    /** Black background only: no golden brand text behind loading card. */
+    private void showIntro() {
+        FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
 
-        // Warm bronze logo behind the compact centered loading popup, like the reference layout.
-        LinearLayout brand=new LinearLayout(this);
-        brand.setGravity(Gravity.CENTER);
-        brand.setOrientation(LinearLayout.VERTICAL);
-        TextView word=text("MINHQUAN",34,0xffb98865);
-        word.setGravity(Gravity.CENTER);
-        word.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        word.setLetterSpacing(.12f);
-        brand.addView(word,new LinearLayout.LayoutParams(-2,-2));
-        TextView caption=text("MD5 ANALYZER",11,0xffb99c84);
-        caption.setGravity(Gravity.CENTER);
-        caption.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        caption.setLetterSpacing(.25f);
-        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);
-        cp.topMargin=dp(2);
-        brand.addView(caption,cp);
-        root.addView(brand,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(8), dp(11), dp(8), dp(8));
+        card.setBackground(shape(0xff302c2b, 10));
+        card.setElevation(dp(10));
+        root.addView(card, new FrameLayout.LayoutParams(dp(174), dp(100), Gravity.CENTER));
 
-        // The entire progress box is deliberately small: 174 x 100 dp.
-        LinearLayout loading=new LinearLayout(this);
-        loading.setOrientation(LinearLayout.VERTICAL);
-        loading.setGravity(Gravity.CENTER_HORIZONTAL);
-        loading.setPadding(dp(8),dp(11),dp(8),dp(9));
-        loading.setBackground(rounded(0xff302a29,10));
-        loading.setElevation(dp(10));
-        FrameLayout.LayoutParams card=new FrameLayout.LayoutParams(dp(174),dp(100),Gravity.CENTER);
-        root.addView(loading,card);
+        ImageView image = avatar(46);
+        card.addView(image);
 
-        FrameLayout avatarHolder=new FrameLayout(this);
-        LinearLayout.LayoutParams holderParams=new LinearLayout.LayoutParams(dp(46),dp(46));
-        loading.addView(avatarHolder,holderParams);
-        ImageView rotating=new ImageView(this);
-        rotating.setImageResource(R.drawable.minhquan_avatar);
-        rotating.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        rotating.setContentDescription("Ảnh mặt nạ xanh MinhQuan đang xoay");
-        avatarHolder.addView(rotating,new FrameLayout.LayoutParams(-1,-1,Gravity.CENTER));
+        TextView loading = text("Loading data from Server...", 10.2f, 0xffeeeae8);
+        loading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        loading.setSingleLine(true);
+        loading.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(20));
+        lp.topMargin = dp(8);
+        card.addView(loading, lp);
 
-        TextView message=text("Loading data from Server...",10.5f,0xfff0e8e4);
-        message.setSingleLine(true);
-        message.setGravity(Gravity.CENTER);
-        message.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        message.setIncludeFontPadding(false);
-        LinearLayout.LayoutParams label=new LinearLayout.LayoutParams(-1,dp(20));
-        label.topMargin=dp(8);
-        loading.addView(message,label);
-        // Text imitates reference presentation only; the app does not contact a server.
         setContentView(root);
-        spin=ObjectAnimator.ofFloat(rotating,"rotation",0f,360f);
-        spin.setDuration(1450);
-        spin.setRepeatCount(ObjectAnimator.INFINITE);
-        spin.setInterpolator(new android.view.animation.LinearInterpolator());
-        spin.start();
+        avatarSpin = ObjectAnimator.ofFloat(image, "rotation", 0f, 360f);
+        avatarSpin.setDuration(1350);
+        avatarSpin.setRepeatCount(ObjectAnimator.INFINITE);
+        avatarSpin.setInterpolator(new LinearInterpolator());
+        avatarSpin.start();
     }
-    private void renderDashboard(){
-        if(spin!=null){spin.cancel();spin=null;}
-        ScrollView scroll=new ScrollView(this);
-        scroll.setFillViewport(true);scroll.setBackgroundColor(NAVY);
-        LinearLayout content=new LinearLayout(this);content.setPadding(dp(22),dp(32),dp(22),dp(28));
-        content.setOrientation(LinearLayout.VERTICAL);content.setGravity(Gravity.CENTER_HORIZONTAL);
-        scroll.addView(content);
-        ImageView pic=avatar(102);content.addView(pic);
-        TextView header=text("MINHQUAN",26,Color.WHITE);header.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        header.setLetterSpacing(.1f);header.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams h=new LinearLayout.LayoutParams(-1,-2);h.topMargin=dp(14);content.addView(header,h);
-        TextView line=text("TX MD5  •  TRÌNH ĐỌC LỊCH SỬ",12,GOLD);line.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=dp(7);content.addView(line,lp);
-        LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(18),dp(20),dp(18),dp(18));
-        card.setBackground(outlined(0xff17243a,0xff2d4057,18));
-        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.topMargin=dp(27);content.addView(card,cp);
-        TextView sub=text("NHẬN DIỆN TỰ ĐỘNG",16,LIGHT);sub.setTypeface(Typeface.DEFAULT,Typeface.BOLD);card.addView(sub);
-        TextView instructions=text("Cấp quyền hiển thị nổi và ghi màn hình, sau đó mở bảng LỊCH SỬ PHIÊN trong game. Bong bóng MinhQuan sẽ cập nhật kết quả đã hiển thị.",14,SUBTLE);
-        instructions.setLineSpacing(dp(4),1.06f);
-        LinearLayout.LayoutParams ip=new LinearLayout.LayoutParams(-1,-2);ip.topMargin=dp(12);card.addView(instructions,ip);
-        Button start=new Button(this);start.setText("BẮT ĐẦU NHẬN DIỆN");start.setAllCaps(false);
-        start.setTextColor(NAVY);start.setBackgroundTintList(ColorStateList.valueOf(GOLD));
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(52));bp.topMargin=dp(22);card.addView(start,bp);
-        start.setOnClickListener(v->{if(authenticated)begin();else showKeyDialog();});
-        Button stop=new Button(this);stop.setText("DỪNG CHỤP MÀN HÌNH");stop.setAllCaps(false);
-        stop.setTextColor(LIGHT);stop.setBackgroundTintList(ColorStateList.valueOf(0xff34445d));
-        LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(50));sp.topMargin=dp(9);card.addView(stop,sp);
-        stop.setOnClickListener(v->{if(!authenticated){showKeyDialog();return;}
-            Intent command=new Intent(this,CaptureService.class);command.setAction(CaptureService.STOP_ACTION);
-            startService(command);status.setText("Đã yêu cầu dừng chia sẻ màn hình.");});
-        status=text("Chưa bắt đầu phiên nhận diện",13,0xff9dd2b0);
-        LinearLayout.LayoutParams statusP=new LinearLayout.LayoutParams(-1,-2);statusP.topMargin=dp(16);content.addView(status,statusP);
-        TextView note=text("Chỉ đọc kết quả đã xuất hiện; không đảm bảo dự đoán kết quả tương lai. Ứng dụng không gửi ảnh màn hình lên máy chủ.",12,SUBTLE);
-        note.setLineSpacing(dp(3),1f);LinearLayout.LayoutParams noteP=new LinearLayout.LayoutParams(-1,-2);noteP.topMargin=dp(17);content.addView(note,noteP);
+
+    private void stopAvatarSpin() {
+        if (avatarSpin != null) {
+            avatarSpin.cancel();
+            avatarSpin = null;
+        }
+    }
+
+    private void showAccountScreen() {
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(BG);
+        scroll.setClipToPadding(false);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(23), dp(38), dp(23), dp(34));
+        scroll.addView(root, new ScrollView.LayoutParams(-1, -1));
+
+        root.addView(avatar(112));
+        TextView name = text("MINHQUAN", 29, WHITE);
+        name.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        name.setLetterSpacing(0.12f);
+        name.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(-1, -2);
+        nameParams.topMargin = dp(13);
+        root.addView(name, nameParams);
+
+        TextView tagline = text("KHÔNG GIAN THÀNH VIÊN", 11.5f, GREEN);
+        tagline.setGravity(Gravity.CENTER);
+        tagline.setLetterSpacing(0.14f);
+        LinearLayout.LayoutParams tagParams = new LinearLayout.LayoutParams(-1, -2);
+        tagParams.topMargin = dp(6);
+        root.addView(tagline, tagParams);
+
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(20), dp(24), dp(20), dp(24));
+        form.setBackground(outlined(PANEL, BORDER, 20));
+        LinearLayout.LayoutParams formParams = new LinearLayout.LayoutParams(-1, -2);
+        formParams.topMargin = dp(43);
+        root.addView(form, formParams);
+
+        TextView heading = text("Đăng nhập tài khoản", 20, WHITE);
+        heading.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        form.addView(heading);
+        TextView subtitle = text("Chào mừng bạn đến với MinhQuan", 12.5f, MUTED);
+        LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
+        subParams.topMargin = dp(5);
+        form.addView(subtitle, subParams);
+
+        TextView userLabel = text("TÊN NGƯỜI DÙNG", 11.5f, MUTED);
+        userLabel.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(-1, -2);
+        ulp.topMargin = dp(25);
+        form.addView(userLabel, ulp);
+
+        EditText username = new EditText(this);
+        username.setSingleLine(true);
+        username.setTextSize(14.5f);
+        username.setTextColor(WHITE);
+        username.setHintTextColor(0xff61748a);
+        username.setHint("Nhập tên người dùng");
+        username.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        username.setPadding(dp(15), 0, dp(15), 0);
+        username.setBackground(outlined(INPUT, BORDER, 11));
+        LinearLayout.LayoutParams uep = new LinearLayout.LayoutParams(-1, dp(51));
+        uep.topMargin = dp(9);
+        form.addView(username, uep);
+
+        TextView passwordLabel = text("MẬT KHẨU", 11.5f, MUTED);
+        passwordLabel.setLetterSpacing(0.08f);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-1, -2);
+        plp.topMargin = dp(20);
+        form.addView(passwordLabel, plp);
+
+        LinearLayout passwordRow = new LinearLayout(this);
+        passwordRow.setGravity(Gravity.CENTER_VERTICAL);
+        passwordRow.setOrientation(LinearLayout.HORIZONTAL);
+        passwordRow.setBackground(outlined(INPUT, BORDER, 11));
+        LinearLayout.LayoutParams prp = new LinearLayout.LayoutParams(-1, dp(51));
+        prp.topMargin = dp(9);
+        form.addView(passwordRow, prp);
+
+        EditText password = new EditText(this);
+        password.setSingleLine(true);
+        password.setTextSize(14.5f);
+        password.setTextColor(WHITE);
+        password.setHintTextColor(0xff61748a);
+        password.setHint("Nhập mật khẩu");
+        password.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setPadding(dp(15), 0, dp(4), 0);
+        password.setBackgroundColor(Color.TRANSPARENT);
+        passwordRow.addView(password, new LinearLayout.LayoutParams(0, -1, 1));
+
+        TextView showHide = text("Hiện", 12, GREEN);
+        showHide.setGravity(Gravity.CENTER);
+        showHide.setContentDescription("Hiện hoặc ẩn mật khẩu");
+        showHide.setPadding(dp(5), 0, dp(13), 0);
+        passwordRow.addView(showHide, new LinearLayout.LayoutParams(-2, -1));
+        final boolean[] passwordVisible = {false};
+        showHide.setOnClickListener(v -> {
+            passwordVisible[0] = !passwordVisible[0];
+            password.setInputType(InputType.TYPE_CLASS_TEXT |
+                    (passwordVisible[0] ? InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                            : InputType.TYPE_TEXT_VARIATION_PASSWORD));
+            password.setSelection(password.getText().length());
+            showHide.setText(passwordVisible[0] ? "Ẩn" : "Hiện");
+        });
+
+        Button login = new Button(this);
+        login.setText("ĐĂNG NHẬP");
+        login.setTextSize(14);
+        login.setAllCaps(false);
+        login.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        login.setTextColor(0xff0b1b20);
+        login.setBackgroundTintList(ColorStateList.valueOf(GREEN));
+        LinearLayout.LayoutParams loginParams = new LinearLayout.LayoutParams(-1, dp(52));
+        loginParams.topMargin = dp(28);
+        form.addView(login, loginParams);
+        login.setOnClickListener(v -> Toast.makeText(this,
+                "Đây là giao diện mẫu. Chức năng tài khoản chưa được kết nối.",
+                Toast.LENGTH_LONG).show());
+
+        TextView footnote = text("Giao diện đang phát triển • Chưa xác thực tài khoản", 11, MUTED);
+        footnote.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams fn = new LinearLayout.LayoutParams(-1, -2);
+        fn.topMargin = dp(21);
+        root.addView(footnote, fn);
+
         setContentView(scroll);
     }
-    /** A compact, native, centered key dialog styled after the reference screenshot.
-     * This is a window inside MinhQuan, not a system-wide popup on top of other apps.
-     */
-    private void showKeyDialog(){
-        if(isFinishing()||isDestroyed())return;
-        if(keyDialog!=null&&keyDialog.isShowing())return;
 
-        final Dialog dialog=new Dialog(this);
-        keyDialog=dialog;
+    /** Small central key dialog. Counter starts at -1s then -2s, -3s, ... */
+    private void showKeyDialog() {
+        if (isFinishing() || isDestroyedNow || keyAccepted) return;
+        if (keyDialog != null && keyDialog.isShowing()) return;
+
+        final Dialog dialog = new Dialog(this);
+        keyDialog = dialog;
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setCancelable(false);
 
-        final int dialogColor=Color.rgb(57,52,47);
-        final int rule=0xff58524b;
-        final LinearLayout panel=new LinearLayout(this);
+        LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setBackground(rounded(dialogColor,12));
+        panel.setBackground(shape(DIALOG_BG, 11));
         panel.setClipToOutline(true);
 
-        TextView title=text("MinhQuan'z",17,Color.WHITE);
-        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        TextView title = text("MinhQuan'z", 17, WHITE);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(-1,dp(25));
-        titleLayout.topMargin=dp(15);
-        titleLayout.leftMargin=dp(9);
-        titleLayout.rightMargin=dp(9);
-        panel.addView(title,titleLayout);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, dp(27));
+        titleLp.topMargin = dp(14);
+        panel.addView(title, titleLp);
 
-        TextView instructions=text("Bấm Vào Nút Get Key Để Lấy Key Free",11.5f,0xfff1ece7);
-        instructions.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        instructions.setGravity(Gravity.CENTER);
-        instructions.setSingleLine(false);
-        LinearLayout.LayoutParams instructionsLayout=new LinearLayout.LayoutParams(-1,-2);
-        instructionsLayout.leftMargin=dp(10);
-        instructionsLayout.rightMargin=dp(10);
-        instructionsLayout.topMargin=dp(1);
-        panel.addView(instructions,instructionsLayout);
+        TextView help = text("Bấm Vào Nút Get Key Để Lấy Key Free", 11.2f, WHITE);
+        help.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams helpLp = new LinearLayout.LayoutParams(-1, dp(20));
+        helpLp.leftMargin = dp(8);
+        helpLp.rightMargin = dp(8);
+        panel.addView(help, helpLp);
 
-        // The reference's '- 18s' is reproduced as a static visual label.
-        // No fictitious key expiry or countdown is implied.
-        TextView referenceLabel=text("- 18s",11,0xfff1ece7);
-        referenceLabel.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams labelLayout=new LinearLayout.LayoutParams(-1,dp(20));
-        panel.addView(referenceLabel,labelLayout);
+        TextView counter = text("-1s", 12, WHITE);
+        counter.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams countLp = new LinearLayout.LayoutParams(-1, dp(19));
+        panel.addView(counter, countLp);
 
-        final EditText input=new EditText(this);
-        input.setSingleLine(true);
-        input.setTextColor(Color.WHITE);
-        input.setHintTextColor(0xff93939c);
-        input.setTextSize(12.5f);
-        input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        input.setHint("Nhập key MinhQuan");
-        input.setPadding(dp(10),0,dp(9),0);
-        input.setSelectAllOnFocus(false);
-        input.setBackground(rounded(0xff1c1c23,6));
-        LinearLayout.LayoutParams inputLayout=new LinearLayout.LayoutParams(-1,dp(36));
-        inputLayout.leftMargin=dp(14);
-        inputLayout.rightMargin=dp(14);
-        inputLayout.topMargin=dp(14);
-        inputLayout.bottomMargin=dp(15);
-        panel.addView(input,inputLayout);
+        EditText key = new EditText(this);
+        key.setSingleLine(true);
+        key.setTextSize(12.3f);
+        key.setHint("Nhập key MinhQuan");
+        key.setTextColor(WHITE);
+        key.setHintTextColor(0xff9c9da8);
+        key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        key.setPadding(dp(12), 0, dp(12), 0);
+        key.setBackground(shape(0xff1d1e26, 7));
+        LinearLayout.LayoutParams keyLp = new LinearLayout.LayoutParams(-1, dp(38));
+        keyLp.topMargin = dp(16);
+        keyLp.leftMargin = dp(14);
+        keyLp.rightMargin = dp(14);
+        keyLp.bottomMargin = dp(16);
+        panel.addView(key, keyLp);
 
-        android.view.View horizontalRule=new android.view.View(this);
-        horizontalRule.setBackgroundColor(rule);
-        panel.addView(horizontalRule,new LinearLayout.LayoutParams(-1,dp(1)));
+        TextView line = new TextView(this);
+        line.setBackgroundColor(0xff615853);
+        panel.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
 
-        LinearLayout buttons=new LinearLayout(this);
+        LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.CENTER);
-        panel.addView(buttons,new LinearLayout.LayoutParams(-1,dp(45)));
+        panel.addView(buttons, new LinearLayout.LayoutParams(-1, dp(45)));
 
-        TextView getKey=text("Get Key",14,0xffd32129);
-        getKey.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        TextView getKey = text("Get Key", 13.5f, 0xffef4b4b);
         getKey.setGravity(Gravity.CENTER);
-        getKey.setClickable(true);
-        getKey.setFocusable(true);
-        getKey.setContentDescription("Get Key - điền key miễn phí");
-        buttons.addView(getKey,new LinearLayout.LayoutParams(0,-1,1f));
-
-        android.view.View verticalRule=new android.view.View(this);
-        verticalRule.setBackgroundColor(rule);
-        buttons.addView(verticalRule,new LinearLayout.LayoutParams(dp(1),-1));
-
-        TextView ok=text("OK",14,0xff85bffe);
-        ok.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        ok.setGravity(Gravity.CENTER);
-        ok.setClickable(true);
-        ok.setFocusable(true);
-        buttons.addView(ok,new LinearLayout.LayoutParams(0,-1,1f));
-
-        getKey.setOnClickListener(v->{
-            input.setText(DEMO_KEY);
-            input.setSelection(input.length());
-            Toast.makeText(this,"Đã điền key miễn phí",Toast.LENGTH_SHORT).show();
+        getKey.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        buttons.addView(getKey, new LinearLayout.LayoutParams(0, -1, 1));
+        getKey.setOnClickListener(v -> {
+            key.setText(DEMO_KEY);
+            key.setSelection(key.getText().length());
         });
-        ok.setOnClickListener(v->{
-            if(DEMO_KEY.equals(input.getText().toString().trim())){
-                authenticated=true;
-                dialog.dismiss();
-                if(status!=null)status.setText("Đã mở công cụ. Nhấn Bắt đầu để cấp quyền.");
-            }else{
-                input.setError("Key không hợp lệ. Bấm Get Key để lấy key miễn phí.");
+
+        TextView divider = new TextView(this);
+        divider.setBackgroundColor(0xff615853);
+        buttons.addView(divider, new LinearLayout.LayoutParams(dp(1), -1));
+
+        TextView confirm = text("OK", 13.5f, 0xff81bcf7);
+        confirm.setGravity(Gravity.CENTER);
+        confirm.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        buttons.addView(confirm, new LinearLayout.LayoutParams(0, -1, 1));
+        confirm.setOnClickListener(v -> {
+            if (!DEMO_KEY.equals(key.getText().toString().trim())) {
+                key.setError("Key chưa đúng");
+                Toast.makeText(this, "Key không hợp lệ", Toast.LENGTH_SHORT).show();
+                return;
             }
+            keyAccepted = true;
+            stopKeyCounter();
+            dialog.dismiss();
+            sendLoginNotification();
         });
 
         dialog.setContentView(panel);
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.setCancelable(false);
-        Window window=dialog.getWindow();
-        if(window!=null){
-            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            WindowManager.LayoutParams attributes=window.getAttributes();
-            attributes.dimAmount=.58f;
-            window.setAttributes(attributes);
-            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams p = w.getAttributes();
+            p.dimAmount = 0.58f;
+            p.width = dp(274);
+            p.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            p.gravity = Gravity.CENTER;
+            w.setAttributes(p);
+            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         }
+        dialog.setOnDismissListener(d -> stopKeyCounter());
         dialog.show();
-        window=dialog.getWindow();
-        if(window!=null){
-            int width=Math.min(dp(278),getResources().getDisplayMetrics().widthPixels-dp(32));
-            window.setLayout(width,WindowManager.LayoutParams.WRAP_CONTENT);
-            window.setGravity(Gravity.CENTER);
+        // Dialog parameters must also be set after show() on some Android versions.
+        if (dialog.getWindow() != null) dialog.getWindow().setLayout(dp(274), -2);
+
+        counterStarted = SystemClock.elapsedRealtime();
+        timerRunnable = new Runnable() {
+            @Override public void run() {
+                if (isDestroyedNow || !dialog.isShowing()) return;
+                long seconds = 1 + (SystemClock.elapsedRealtime() - counterStarted) / 1000L;
+                counter.setText("-" + seconds + "s");
+                handler.postDelayed(this, 200);
+            }
+        };
+        handler.post(timerRunnable);
+    }
+
+    private void stopKeyCounter() {
+        if (timerRunnable != null) handler.removeCallbacks(timerRunnable);
+        timerRunnable = null;
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            NotificationChannel c = new NotificationChannel(CHANNEL_ID, "Thông báo MinhQuan", NotificationManager.IMPORTANCE_DEFAULT);
+            c.setDescription("Xác nhận đăng nhập key trong ứng dụng MinhQuan");
+            manager.createNotificationChannel(c);
         }
     }
-    private void begin(){
-        if(Build.VERSION.SDK_INT>=33 &&
-                checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED){
-            requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},NOTIFICATION_REQUEST);
+
+    private void sendLoginNotification() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notifyAfterPermission = true;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATIONS);
             return;
         }
-        beginCaptureConsent();
+        postLoginNotification();
     }
-    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grantResults){
-        super.onRequestPermissionsResult(request,permissions,grantResults);
-        if(request==NOTIFICATION_REQUEST && authenticated)beginCaptureConsent();
+
+    private void postLoginNotification() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        Intent open = new Intent(this, MainActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pending = PendingIntent.getActivity(this, 0, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Notification notification = new Notification.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle("MinhQuan")
+                .setContentText("ĐĂNG NHẬP APP THÀNH CÔNG✅")
+                .setStyle(new Notification.BigTextStyle().bigText("ĐĂNG NHẬP APP THÀNH CÔNG✅"))
+                .setAutoCancel(true)
+                .setContentIntent(pending)
+                .build();
+        manager.notify(1006, notification);
     }
-    private void beginCaptureConsent(){
-        if(!Settings.canDrawOverlays(this)){
-            status.setText("Cấp quyền 'Hiển thị trên ứng dụng khác', sau đó quay lại bấm Bắt đầu.");
-            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));
-            return;
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQUEST_NOTIFICATIONS && notifyAfterPermission) {
+            notifyAfterPermission = false;
+            if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+                postLoginNotification();
+            } else {
+                Toast.makeText(this, "Cần cấp quyền thông báo để hiển thị xác nhận.", Toast.LENGTH_LONG).show();
+            }
         }
-        status.setText("Đang yêu cầu quyền chia sẻ màn hình...");
-        startActivityForResult(manager.createScreenCaptureIntent(),CAPTURE_REQUEST);
     }
-    @Override protected void onActivityResult(int request,int code,Intent data){
-        super.onActivityResult(request,code,data);
-        if(request!=CAPTURE_REQUEST)return;
-        if(code==RESULT_OK && data!=null){
-            Intent service=new Intent(this,CaptureService.class);
-            service.putExtra("result",code);service.putExtra("data",data);
-            if(Build.VERSION.SDK_INT>=26)startForegroundService(service);else startService(service);
-            if(status!=null)status.setText("Đã cấp quyền. Hãy mở bảng LỊCH SỬ PHIÊN trong game.");
-        }else if(status!=null)status.setText("Bạn đã từ chối chia sẻ màn hình.");
+
+    @Override
+    protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("keyAccepted", keyAccepted);
+        super.onSaveInstanceState(state);
     }
-    @Override protected void onSaveInstanceState(Bundle state){super.onSaveInstanceState(state);state.putBoolean("authenticated",authenticated);}
-    @Override protected void onDestroy(){ui.removeCallbacks(openLogin);if(spin!=null)spin.cancel();if(keyDialog!=null){keyDialog.dismiss();keyDialog=null;}super.onDestroy();}
+
+    @Override
+    protected void onDestroy() {
+        isDestroyedNow = true;
+        if (introRunnable != null) handler.removeCallbacks(introRunnable);
+        stopAvatarSpin();
+        stopKeyCounter();
+        if (keyDialog != null) {
+            keyDialog.setOnDismissListener(null);
+            if (keyDialog.isShowing()) keyDialog.dismiss();
+        }
+        super.onDestroy();
+    }
 }
