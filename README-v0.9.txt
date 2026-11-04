@@ -1,0 +1,1 @@
+MinhQuan v0.9: opens splash, requests FreeKey_MinhQuan, then opens Matrix/overlay controller directly. Account/password UI is no longer in the navigation flow. Overlay remains a display-only test, NOT actual hidden-enemy ESP. Android APK must be built/tested via GitHub Actions.

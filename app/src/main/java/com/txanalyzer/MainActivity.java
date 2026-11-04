@@ -118,17 +118,16 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
         createNotificationChannel();
+        // Only one authentication step: local key. No account/password screen.
         if (state != null && state.getBoolean("keyAccepted", false)) {
             keyAccepted = true;
-            consoleOpen = state.getBoolean("consoleOpen", false);
-            if (consoleOpen) showMatrixScreen();
-            else showAccountScreen();
+            consoleOpen = true;
+            showMatrixScreen();
         } else {
             showIntro();
             introRunnable = () -> {
                 if (!isDestroyedNow && !isFinishing()) {
                     stopAvatarSpin();
-                    showAccountScreen();
                     showKeyDialog();
                 }
             };
@@ -443,22 +442,6 @@ public class MainActivity extends Activity {
         overlayNote.setGravity(Gravity.CENTER);
         layout.addView(overlayNote);
 
-        Button exit = new Button(this);
-        exit.setAllCaps(false);
-        exit.setText("Trở về đăng nhập");
-        exit.setTextSize(13);
-        exit.setTextColor(0xffdbfff0);
-        exit.setBackgroundTintList(ColorStateList.valueOf(0xff174b3f));
-        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(-1,dp(46));
-        backLp.topMargin=dp(24);
-        layout.addView(exit,backLp);
-        exit.setOnClickListener(v -> {
-            consoleOpen=false;
-            if (consoleRunnable != null) handler.removeCallbacks(consoleRunnable);
-            if (rainView != null) rainView.stop();
-            rainView=null;
-            showAccountScreen();
-        });
         setContentView(screen);
         String[] messages = new String[]{
                 "$ minhquan --init --visual",
@@ -575,6 +558,9 @@ public class MainActivity extends Activity {
             keyAccepted = true;
             stopKeyCounter();
             dialog.dismiss();
+            hideKeyboard();
+            consoleOpen = true;
+            showMatrixScreen();
             sendLoginNotification();
         });
 
