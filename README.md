@@ -1,11 +1,12 @@
-# MinhQuan — Android v0.3 (Source)
+# MinhQuan — Android v0.4 (Source)
 
 Native Android Java app, from TX-MD5-Analyzer Smart v0.2.
 
 ## Startup / icon
 - Launcher icon and round avatar: exact mask image supplied by the user, centered/cropped as an Android image resource.
 - Animated splash: circular avatar rotating for **3 seconds**, then a small dark key window **centered within the app** (not a third-party floating permission overlay).
-- Free **offline demo key**: `FreeKey_MinhQuan`; tap **Lấy key** to auto-fill, then tap **XÁC NHẬN**. This local UI demo is **not** secure authentication, does not contact a server, and is not a subscription/license system.
+- Reference-style compact key dialog titled **MinhQuan'z**, 278dp wide, warm charcoal background, dark single-line field, red **Get Key** / blue **OK**. The `- 18s` label is visual only, not a countdown.
+- Free **offline demo key**: `FreeKey_MinhQuan`; tap **Get Key** to auto-fill, then tap **OK**. This local UI demo is **not** secure authentication, does not contact a server, and is not a subscription/license system.
 - After that: start screen-reading, stop, or open the history-reading bubble with user-granted Android overlay and MediaProjection permissions.
 - The capture service remains the Smart v0.2 automatic history reader (ML Kit OCR and chip detection).
 

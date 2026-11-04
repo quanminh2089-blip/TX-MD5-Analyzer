@@ -27,6 +27,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /** Native startup splash + small centered key dialog; the key is an offline DEMO gate,
  * not a remote license or security system. Screen capture always requires user consent. */
@@ -138,54 +139,126 @@ public class MainActivity extends Activity {
         note.setLineSpacing(dp(3),1f);LinearLayout.LayoutParams noteP=new LinearLayout.LayoutParams(-1,-2);noteP.topMargin=dp(17);content.addView(note,noteP);
         setContentView(scroll);
     }
-    /** Centered floating-style dialog within the app, deliberately NOT a system overlay. */
+    /** A compact, native, centered key dialog styled after the reference screenshot.
+     * This is a window inside MinhQuan, not a system-wide popup on top of other apps.
+     */
     private void showKeyDialog(){
         if(isFinishing()||isDestroyed())return;
         if(keyDialog!=null&&keyDialog.isShowing())return;
-        Dialog dialog=new Dialog(this);keyDialog=dialog;
+
+        final Dialog dialog=new Dialog(this);
+        keyDialog=dialog;
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(20),dp(19),dp(20),dp(17));
-        body.setBackground(outlined(0xff20283a,0xff647083,17));
-        TextView heading=text("MINHQUAN",19,Color.WHITE);heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        heading.setGravity(Gravity.CENTER);body.addView(heading);
-        TextView hint=text("Nhập key để mở công cụ",13,0xffd2d9e6);hint.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams hintP=new LinearLayout.LayoutParams(-1,-2);hintP.topMargin=dp(7);body.addView(hint,hintP);
-        TextView demo=text("Key miễn phí • Không cần tài khoản",11,GOLD);demo.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams demoP=new LinearLayout.LayoutParams(-1,-2);demoP.topMargin=dp(6);body.addView(demo,demoP);
-        EditText input=new EditText(this);
-        input.setSingleLine(true);input.setTextColor(Color.WHITE);input.setHintTextColor(0xff8a98ac);
-        input.setTextSize(14);input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
-        input.setHint("Nhập key MinhQuan");input.setPadding(dp(11),0,dp(11),0);
-        input.setBackground(outlined(0xff0d1726,0xff46536c,9));
-        LinearLayout.LayoutParams inP=new LinearLayout.LayoutParams(-1,dp(46));inP.topMargin=dp(17);body.addView(input,inP);
-        TextView error=text("",12,0xfff5a4a4);error.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams errP=new LinearLayout.LayoutParams(-1,-2);errP.topMargin=dp(7);body.addView(error,errP);
-        LinearLayout controls=new LinearLayout(this);controls.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams rowP=new LinearLayout.LayoutParams(-1,dp(46));rowP.topMargin=dp(10);body.addView(controls,rowP);
-        Button get=new Button(this);get.setText("Lấy key");get.setAllCaps(false);get.setTextColor(GOLD);
-        get.setBackgroundTintList(ColorStateList.valueOf(0xff323b50));
-        LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(0,-1,1);left.rightMargin=dp(7);controls.addView(get,left);
-        Button accept=new Button(this);accept.setText("XÁC NHẬN");accept.setAllCaps(false);accept.setTextColor(NAVY);
-        accept.setBackgroundTintList(ColorStateList.valueOf(GOLD));controls.addView(accept,new LinearLayout.LayoutParams(0,-1,1));
-        get.setOnClickListener(v->{input.setText(DEMO_KEY);input.setSelection(input.length());error.setText("Key miễn phí đã được điền.");});
-        accept.setOnClickListener(v->{
-            if(DEMO_KEY.equals(input.getText().toString().trim())){
-                authenticated=true;dialog.dismiss();if(status!=null)status.setText("Đã mở công cụ. Nhấn Bắt đầu để cấp quyền.");
-            }else{error.setText("Key không hợp lệ. Nhấn 'Lấy key' để nhận key miễn phí.");}
+
+        final int dialogColor=Color.rgb(57,52,47);
+        final int rule=0xff58524b;
+        final LinearLayout panel=new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackground(rounded(dialogColor,12));
+        panel.setClipToOutline(true);
+
+        TextView title=text("MinhQuan'z",17,Color.WHITE);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams titleLayout=new LinearLayout.LayoutParams(-1,dp(25));
+        titleLayout.topMargin=dp(15);
+        titleLayout.leftMargin=dp(9);
+        titleLayout.rightMargin=dp(9);
+        panel.addView(title,titleLayout);
+
+        TextView instructions=text("Bấm Vào Nút Get Key Để Lấy Key Free",11.5f,0xfff1ece7);
+        instructions.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        instructions.setGravity(Gravity.CENTER);
+        instructions.setSingleLine(false);
+        LinearLayout.LayoutParams instructionsLayout=new LinearLayout.LayoutParams(-1,-2);
+        instructionsLayout.leftMargin=dp(10);
+        instructionsLayout.rightMargin=dp(10);
+        instructionsLayout.topMargin=dp(1);
+        panel.addView(instructions,instructionsLayout);
+
+        // The reference's '- 18s' is reproduced as a static visual label.
+        // No fictitious key expiry or countdown is implied.
+        TextView referenceLabel=text("- 18s",11,0xfff1ece7);
+        referenceLabel.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams labelLayout=new LinearLayout.LayoutParams(-1,dp(20));
+        panel.addView(referenceLabel,labelLayout);
+
+        final EditText input=new EditText(this);
+        input.setSingleLine(true);
+        input.setTextColor(Color.WHITE);
+        input.setHintTextColor(0xff93939c);
+        input.setTextSize(12.5f);
+        input.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        input.setHint("Nhập key MinhQuan");
+        input.setPadding(dp(10),0,dp(9),0);
+        input.setSelectAllOnFocus(false);
+        input.setBackground(rounded(0xff1c1c23,6));
+        LinearLayout.LayoutParams inputLayout=new LinearLayout.LayoutParams(-1,dp(36));
+        inputLayout.leftMargin=dp(14);
+        inputLayout.rightMargin=dp(14);
+        inputLayout.topMargin=dp(14);
+        inputLayout.bottomMargin=dp(15);
+        panel.addView(input,inputLayout);
+
+        android.view.View horizontalRule=new android.view.View(this);
+        horizontalRule.setBackgroundColor(rule);
+        panel.addView(horizontalRule,new LinearLayout.LayoutParams(-1,dp(1)));
+
+        LinearLayout buttons=new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.CENTER);
+        panel.addView(buttons,new LinearLayout.LayoutParams(-1,dp(45)));
+
+        TextView getKey=text("Get Key",14,0xffd32129);
+        getKey.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        getKey.setGravity(Gravity.CENTER);
+        getKey.setClickable(true);
+        getKey.setFocusable(true);
+        getKey.setContentDescription("Get Key - điền key miễn phí");
+        buttons.addView(getKey,new LinearLayout.LayoutParams(0,-1,1f));
+
+        android.view.View verticalRule=new android.view.View(this);
+        verticalRule.setBackgroundColor(rule);
+        buttons.addView(verticalRule,new LinearLayout.LayoutParams(dp(1),-1));
+
+        TextView ok=text("OK",14,0xff85bffe);
+        ok.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        ok.setGravity(Gravity.CENTER);
+        ok.setClickable(true);
+        ok.setFocusable(true);
+        buttons.addView(ok,new LinearLayout.LayoutParams(0,-1,1f));
+
+        getKey.setOnClickListener(v->{
+            input.setText(DEMO_KEY);
+            input.setSelection(input.length());
+            Toast.makeText(this,"Đã điền key miễn phí",Toast.LENGTH_SHORT).show();
         });
-        dialog.setContentView(body);
+        ok.setOnClickListener(v->{
+            if(DEMO_KEY.equals(input.getText().toString().trim())){
+                authenticated=true;
+                dialog.dismiss();
+                if(status!=null)status.setText("Đã mở công cụ. Nhấn Bắt đầu để cấp quyền.");
+            }else{
+                input.setError("Key không hợp lệ. Bấm Get Key để lấy key miễn phí.");
+            }
+        });
+
+        dialog.setContentView(panel);
         dialog.setCanceledOnTouchOutside(false);
         dialog.setCancelable(false);
         Window window=dialog.getWindow();
-        if(window!=null){window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        if(window!=null){
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            WindowManager.LayoutParams p=window.getAttributes();p.dimAmount=.68f;window.setAttributes(p);
+            WindowManager.LayoutParams attributes=window.getAttributes();
+            attributes.dimAmount=.58f;
+            window.setAttributes(attributes);
             window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         }
         dialog.show();
-        window=dialog.getWindow();if(window!=null){
-            int width=Math.min(dp(330),getResources().getDisplayMetrics().widthPixels-dp(34));
+        window=dialog.getWindow();
+        if(window!=null){
+            int width=Math.min(dp(278),getResources().getDisplayMetrics().widthPixels-dp(32));
             window.setLayout(width,WindowManager.LayoutParams.WRAP_CONTENT);
             window.setGravity(Gravity.CENTER);
         }
