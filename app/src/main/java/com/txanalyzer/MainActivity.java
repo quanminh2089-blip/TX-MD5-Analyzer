@@ -1,6 +1,8 @@
 package com.txanalyzer;
 
+import android.animation.ObjectAnimator;
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -9,171 +11,210 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
-import android.view.View;
-import android.view.inputmethod.EditorInfo;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-/** Only the local key screen. After consent, leave the app and show the small overlay. */
+/** Restore the v0.7 rotating intro and small MinhQuan'z key dialog.
+ *  Never expose the previous Matrix/account screen. */
 public final class MainActivity extends Activity {
-    private static final String KEY = "FreeKey_MinhQuan"; // local-only key, NOT server authentication
-    private static final String GAME_PACKAGE = "com.garena.game.kgvn";
+    private static final String KEY = "FreeKey_MinhQuan";
+    private static final String GAME = "com.garena.game.kgvn";
+    private static final long INTRO_MS = 3000;
     private static final int REQ_OVERLAY = 401;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private boolean opened = false;
-    private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
+    private ObjectAnimator avatarSpin;
+    private Dialog keyDialog;
+    private Runnable counterTask;
+    private boolean accepted = false;
+    private boolean launched = false;
+    private boolean destroyed = false;
 
-    @Override public void onCreate(Bundle state) {
+    private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}
+    private GradientDrawable shape(int color,int radius){
+        GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(radius));return d;
+    }
+    private TextView txt(String s,float size,int color){
+        TextView t=new TextView(this);t.setText(s);t.setTextSize(size);t.setTextColor(color);return t;
+    }
+    private ImageView avatar(int size){
+        ImageView a=new ImageView(this);a.setImageResource(R.drawable.minhquan_avatar);
+        a.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        a.setContentDescription("Avatar MinhQuan");
+        a.setLayoutParams(new LinearLayout.LayoutParams(dp(size),dp(size)));return a;
+    }
+    @Override public void onCreate(Bundle state){
         super.onCreate(state);
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
-        if (keyPassed()) {
-            if (Settings.canDrawOverlays(this)) {
-                handler.post(this::openOverlayAndGame);
-            } else {
-                showOverlayPermission();
-            }
-        } else {
-            showKeyOnly();
-        }
+        // A key is requested on each fresh launch, like the original v0.7 screen.
+        accepted=state!=null && state.getBoolean("accepted",false);
+        if(accepted){afterKey();return;}
+        showIntro();
+        handler.postDelayed(()->{
+            if(destroyed||isFinishing())return;
+            stopSpin();showKeyHost();showKeyDialog();
+        }, INTRO_MS);
     }
-
-    private boolean keyPassed() {
-        return getSharedPreferences("minhquan_local", MODE_PRIVATE).getBoolean("key_accepted",false);
+    private void showIntro(){
+        FrameLayout root=new FrameLayout(this);root.setBackgroundColor(Color.BLACK);
+        LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        card.setPadding(dp(8),dp(11),dp(8),dp(8));
+        card.setBackground(shape(0xff302c2b,10));card.setElevation(dp(10));
+        root.addView(card,new FrameLayout.LayoutParams(dp(174),dp(100),Gravity.CENTER));
+        ImageView image=avatar(46);card.addView(image);
+        TextView loading=txt("Loading data from Server...",10.2f,0xffeeeae8);
+        loading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        loading.setSingleLine(true);loading.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(20));lp.topMargin=dp(8);
+        card.addView(loading,lp);setContentView(root);
+        avatarSpin=ObjectAnimator.ofFloat(image,"rotation",0f,360f);
+        avatarSpin.setDuration(1350);avatarSpin.setRepeatCount(ObjectAnimator.INFINITE);
+        avatarSpin.setInterpolator(new LinearInterpolator());avatarSpin.start();
     }
-
-    private GradientDrawable bg(int fill, int border, int radius) {
-        GradientDrawable d=new GradientDrawable();
-        d.setColor(fill); d.setCornerRadius(dp(radius));
-        d.setStroke(dp(1), border);
-        return d;
-    }
-
-    private LinearLayout screen() {
-        LinearLayout root=new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(26),dp(22),dp(26),dp(22));
-        root.setBackgroundColor(0xff070d10);
+    private void stopSpin(){if(avatarSpin!=null){avatarSpin.cancel();avatarSpin=null;}}
+    private void showKeyHost(){
+        FrameLayout root=new FrameLayout(this);root.setBackgroundColor(0xff080e19);
+        LinearLayout body=new LinearLayout(this);body.setOrientation(LinearLayout.VERTICAL);
+        body.setGravity(Gravity.CENTER);body.addView(avatar(104));
+        TextView name=txt("MINHQUAN",22,0xff42e6b2);
+        name.setGravity(Gravity.CENTER);name.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);np.topMargin=dp(14);
+        body.addView(name,np);root.addView(body,new FrameLayout.LayoutParams(-1,-1));
         setContentView(root);
-        return root;
     }
-
-    private TextView label(String s, int size, int color) {
-        TextView t=new TextView(this); t.setText(s); t.setTextSize(size);
-        t.setTextColor(color); t.setGravity(Gravity.CENTER);
-        return t;
-    }
-
-    private Button button(String s) {
-        Button b=new Button(this); b.setText(s); b.setAllCaps(false);
-        b.setTextSize(15); b.setTextColor(0xff041511);
-        b.setBackground(bg(0xff4ce0ae,0xff4ce0ae,12));
-        return b;
-    }
-
-    private void showKeyOnly() {
-        LinearLayout root=screen();
-        ImageView img=new ImageView(this);
-        img.setImageResource(R.drawable.minhquan_avatar);
-        img.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        root.addView(img,new LinearLayout.LayoutParams(dp(112),dp(112)));
-
-        TextView name=label("MINHQUAN",23,0xff65e7b9);
-        name.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);np.topMargin=dp(10);
-        root.addView(name,np);
-
-        EditText entry=new EditText(this);
-        entry.setSingleLine(true);
-        entry.setHint("Nhập key để tiếp tục");
-        entry.setTextColor(Color.WHITE);
-        entry.setHintTextColor(0xff83968d);
-        entry.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        entry.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        entry.setPadding(dp(16),0,dp(16),0);
-        entry.setBackground(bg(0xff132320,0xff3e8c71,12));
-        LinearLayout.LayoutParams ep=new LinearLayout.LayoutParams(-1,dp(52)); ep.topMargin=dp(28);
-        root.addView(entry,ep);
-
-        Button enter=button("Xác nhận key");
-        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(52)); bp.topMargin=dp(14);
-        root.addView(enter,bp);
-        View.OnClickListener submit=v -> {
-            if (!KEY.equals(entry.getText().toString().trim())) {
-                entry.setError("Key không đúng"); return;
+    private void showKeyDialog(){
+        if(destroyed||accepted||isFinishing())return;
+        if(keyDialog!=null&&keyDialog.isShowing())return;
+        Dialog dialog=new Dialog(this);keyDialog=dialog;
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);dialog.setCancelable(false);
+        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setBackground(shape(0xff36312f,11));panel.setClipToOutline(true);
+        TextView title=txt("MinhQuan'z",17,Color.WHITE);
+        title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(-1,dp(27));tp.topMargin=dp(14);panel.addView(title,tp);
+        TextView hint=txt("Bấm Vào Nút Get Key Để Lấy Key Free",11.2f,Color.WHITE);
+        hint.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(20));hp.leftMargin=dp(8);hp.rightMargin=dp(8);
+        panel.addView(hint,hp);
+        TextView counter=txt("-1s",12,Color.WHITE);counter.setGravity(Gravity.CENTER);
+        panel.addView(counter,new LinearLayout.LayoutParams(-1,dp(19)));
+        EditText key=new EditText(this);key.setSingleLine(true);key.setTextSize(12.3f);
+        key.setHint("Nhập key MinhQuan");key.setTextColor(Color.WHITE);
+        key.setHintTextColor(0xff9c9da8);
+        key.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        key.setPadding(dp(12),0,dp(12),0);key.setBackground(shape(0xff1d1e26,7));
+        LinearLayout.LayoutParams kp=new LinearLayout.LayoutParams(-1,dp(38));
+        kp.topMargin=dp(16);kp.leftMargin=dp(14);kp.rightMargin=dp(14);kp.bottomMargin=dp(16);
+        panel.addView(key,kp);
+        TextView line=txt("",1,Color.TRANSPARENT);line.setBackgroundColor(0xff615853);
+        panel.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
+        LinearLayout actions=new LinearLayout(this);actions.setGravity(Gravity.CENTER);
+        panel.addView(actions,new LinearLayout.LayoutParams(-1,dp(45)));
+        TextView getKey=txt("Get Key",13.5f,0xffef4b4b);
+        getKey.setTypeface(Typeface.DEFAULT,Typeface.BOLD);getKey.setGravity(Gravity.CENTER);
+        actions.addView(getKey,new LinearLayout.LayoutParams(0,-1,1));
+        getKey.setOnClickListener(v->{key.setText(KEY);key.setSelection(key.getText().length());});
+        TextView sep=txt("",1,Color.TRANSPARENT);sep.setBackgroundColor(0xff615853);
+        actions.addView(sep,new LinearLayout.LayoutParams(dp(1),-1));
+        TextView ok=txt("OK",13.5f,0xff81bcf7);
+        ok.setTypeface(Typeface.DEFAULT,Typeface.BOLD);ok.setGravity(Gravity.CENTER);
+        actions.addView(ok,new LinearLayout.LayoutParams(0,-1,1));
+        ok.setOnClickListener(v->{
+            if(!KEY.equals(key.getText().toString().trim())){
+                key.setError("Key chưa đúng");Toast.makeText(this,"Key không hợp lệ",Toast.LENGTH_SHORT).show();return;
             }
-            getSharedPreferences("minhquan_local",MODE_PRIVATE).edit()
-                    .putBoolean("key_accepted",true).apply();
-            if (Settings.canDrawOverlays(this)) openOverlayAndGame();
-            else { showOverlayPermission(); askOverlayPermission(); }
-        };
-        enter.setOnClickListener(submit);
-        entry.setOnEditorActionListener((v,action,event) -> { submit.onClick(v); return true; });
+            accepted=true;stopCounter();dialog.dismiss();keyDialog=null;
+            handler.postDelayed(this::afterKey,120);
+        });
+        dialog.setContentView(panel);
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            WindowManager.LayoutParams p=w.getAttributes();p.dimAmount=.58f;
+            p.width=dp(274);p.height=-2;p.gravity=Gravity.CENTER;w.setAttributes(p);
+            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        }
+        dialog.setOnDismissListener(d->stopCounter());dialog.show();
+        if(dialog.getWindow()!=null)dialog.getWindow().setLayout(dp(274),-2);
+        long since=SystemClock.elapsedRealtime();
+        counterTask=new Runnable(){@Override public void run(){
+            if(destroyed||!dialog.isShowing())return;
+            long s=1+(SystemClock.elapsedRealtime()-since)/1000L;
+            counter.setText("-"+s+"s");handler.postDelayed(this,200);
+        }};
+        handler.post(counterTask);
     }
-
-    private void showOverlayPermission() {
-        LinearLayout root=screen();
-        root.addView(label("MINHQUAN",24,0xff4ce0ae));
-        TextView hint=label("Cho phép 'Hiển thị trên ứng dụng khác' để mở nút AUTO CHƠI trên game.",15,Color.WHITE);
-        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,-2);hp.topMargin=dp(24);
-        root.addView(hint,hp);
-        Button allow=button("Cấp quyền hiển thị");
-        LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,dp(52));ap.topMargin=dp(26);
-        root.addView(allow,ap);
-        allow.setOnClickListener(v->askOverlayPermission());
+    private void stopCounter(){if(counterTask!=null){handler.removeCallbacks(counterTask);counterTask=null;}}
+    private void afterKey(){
+        if(!accepted||destroyed||isFinishing()||launched)return;
+        if(Settings.canDrawOverlays(this))openOverlayAndGame();else askOverlay();
     }
-
-    private void askOverlayPermission() {
-        if (Settings.canDrawOverlays(this)) {openOverlayAndGame();return;}
-        try {
+    private void askOverlay(){
+        try{
             Intent i=new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:"+getPackageName()));
-            startActivityForResult(i, REQ_OVERLAY);
-        } catch (Exception ex) {
-            Toast.makeText(this,"Không mở được trang cấp quyền: "+ex.getMessage(),Toast.LENGTH_LONG).show();
+                Uri.parse("package:"+getPackageName()));
+            startActivityForResult(i,REQ_OVERLAY);
+        }catch(Exception ex){showOverlayRetry();}
+    }
+    private void showOverlayRetry(){
+        LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);layout.setPadding(dp(24),0,dp(24),0);
+        layout.setBackgroundColor(0xff080e19);
+        TextView msg=txt("Cần quyền 'Hiển thị trên ứng dụng khác'",17,Color.WHITE);
+        msg.setGravity(Gravity.CENTER);layout.addView(msg);
+        Button retry=new Button(this);retry.setText("Cấp quyền hiển thị");retry.setAllCaps(false);
+        layout.addView(retry,new LinearLayout.LayoutParams(-1,dp(56)));
+        retry.setOnClickListener(v->askOverlay());setContentView(layout);
+    }
+    @Override protected void onActivityResult(int code,int result,Intent data){
+        super.onActivityResult(code,result,data);
+        if(code==REQ_OVERLAY&&accepted){
+            if(Settings.canDrawOverlays(this))openOverlayAndGame();else showOverlayRetry();
         }
     }
-
-    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
-        super.onActivityResult(requestCode,resultCode,data);
-        if(requestCode==REQ_OVERLAY && keyPassed() && Settings.canDrawOverlays(this)) {
-            openOverlayAndGame();
-        }
-    }
-
-    @Override protected void onResume() {
+    @Override protected void onResume(){
         super.onResume();
-        if(keyPassed() && Settings.canDrawOverlays(this)) {
-            handler.postDelayed(this::openOverlayAndGame,220);
-        }
+        if(accepted&&!launched&&Settings.canDrawOverlays(this))
+            handler.postDelayed(this::afterKey,280);
     }
-
-    private void openOverlayAndGame() {
-        if(opened || isFinishing() || !keyPassed() || !Settings.canDrawOverlays(this)) return;
-        opened=true;
-        try { startService(new Intent(this,EspOverlayService.class)); }
-        catch(Exception ex) { opened=false;Toast.makeText(this,"Không mở được menu nổi",Toast.LENGTH_LONG).show();return; }
-        // Launch the existing Vietnamese Liên Quân app when installed; otherwise return Home.
-        Intent game=getPackageManager().getLaunchIntentForPackage(GAME_PACKAGE);
-        try {
-            if(game!=null) { game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(game); }
-            else {
-                Intent home=new Intent(Intent.ACTION_MAIN);
-                home.addCategory(Intent.CATEGORY_HOME);
-                home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(home);
+    private void openOverlayAndGame(){
+        if(launched||!accepted||isFinishing()||!Settings.canDrawOverlays(this))return;
+        launched=true;
+        try{startService(new Intent(this,EspOverlayService.class));}
+        catch(Exception ex){
+            launched=false;Toast.makeText(this,"Không mở được bong bóng: "+ex.getMessage(),Toast.LENGTH_LONG).show();
+            showOverlayRetry();return;
+        }
+        // If installed, launch the game. No automatic touch is dispatched on launch.
+        try{
+            Intent game=getPackageManager().getLaunchIntentForPackage(GAME);
+            if(game!=null){game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(game);}
+            else{
+                Toast.makeText(this,"Hãy mở Liên Quân thủ công",Toast.LENGTH_LONG).show();
+                Intent home=new Intent(Intent.ACTION_MAIN);home.addCategory(Intent.CATEGORY_HOME);
+                home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(home);
             }
-        } catch(Exception ignored) { /* The overlay still works; user can open game manually. */ }
+        }catch(Exception ignored){}
         finish();
     }
-
-    @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);super.onDestroy();}
+    @Override protected void onSaveInstanceState(Bundle state){state.putBoolean("accepted",accepted);super.onSaveInstanceState(state);}
+    @Override protected void onDestroy(){
+        destroyed=true;handler.removeCallbacksAndMessages(null);stopSpin();stopCounter();
+        if(keyDialog!=null){keyDialog.setOnDismissListener(null);keyDialog.dismiss();keyDialog=null;}
+        super.onDestroy();
+    }
 }

@@ -1,19 +1,9 @@
-# MinhQuan v1.0 - Bot decision core (prototype)
+# MinhQuan BotCore — v1.2
 
-This is a real deterministic decision engine, not an autonomous Liên Quân bot.
-It does not capture screens, recognize champions, dispatch gestures by itself, or hook game memory. The separate AutoControl module implements a basic opt-in gesture TEST; it is not connected to game-state perception.
+`app/src/main/java/com/txanalyzer/bot/BotCore.java` là bộ ra quyết định có điều kiện an toàn theo từng Observation. `BotSession.java` giữ công tắc session. Test JVM: `tests/BotCoreTest.java`.
 
-## Included
-- `BotCore.java`: prioritizes stop/wait, stale-frame rejection, confidence gating, survival, shopping, visible combat, farming, pushing, lane return.
-- `BotSession.java`: explicit disabled-by-default gate.
-- `tests/BotCoreTest.java`: six JVM tests without Android SDK.
+**Quan trọng:** Không có nguồn Observation từ game thật, không có thị giác máy tính. AutoControl hiện là trình gửi gesture thử nghiệm (đánh và di chuyển) trên game được nhận diện, **không kết nối với BotCore** và **không tự chơi toàn trận**. Tọa độ cử chỉ tương đối có thể không khớp với HUD của bạn.
 
-## Run tests (Termux with Java installed)
-`mkdir -p /tmp/mqbotclasses && javac -d /tmp/mqbotclasses app/src/main/java/com/txanalyzer/bot/*.java tests/BotCoreTest.java && java -cp /tmp/mqbotclasses BotCoreTest`
+AutoControl v1.2 không từ chối khi không nhận ra game tại thời điểm nhấn; nó chuyển sang ON/chờ và chỉ gửi gesture trong cửa sổ game ngang. ON không có nghĩa đã phát hiện game. Android giữ quyền Trợ năng sau khi cấp trừ khi người dùng hoặc hệ thống thu hồi/tắt dịch vụ. Giới hạn 15 phút nhằm tránh điều khiển vô thời hạn.
 
-## Not yet implemented
-Screen capture, computer vision, game-state calibration, connection between live observations and control actions, live match testing.
-No guarantee of full-match gameplay or compatibility with anti-cheat.
-
-## Important
-Input observations must come from a verified source; do not fabricate hidden enemy positions.
+Các phần cần phát triển để bot độc lập thật: màn hình capture được người dùng đồng ý, trích xuất HUD, nhận diện phase/trận, kiểm tra độ tin cậy và kết nối Observation->Decision->Action, kèm hệ thống dừng khẩn cấp và đánh giá thực địa trên chế độ luyện tập.

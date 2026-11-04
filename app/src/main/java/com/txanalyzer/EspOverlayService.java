@@ -1,106 +1,131 @@
 package com.txanalyzer;
 
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.Gravity;
+import android.view.accessibility.AccessibilityManager;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.List;
 
-/** Minimal one-switch overlay. Touch to toggle; drag to reposition. */
+/** A single circular OFF/ON bubble. Tap to arm/stop; drag to reposition. */
 public final class EspOverlayService extends Service {
     private static EspOverlayService current;
     private WindowManager wm;
-    private TextView switchButton;
+    private TextView bubble;
     private WindowManager.LayoutParams params;
     private boolean dragging;
-    private int dp(float v){return (int)(v * getResources().getDisplayMetrics().density + .5f);}
+    private float downX,downY;
+    private int initialX,initialY;
+    private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+.5f);}
     @Override public IBinder onBind(Intent i){return null;}
     @Override public void onCreate(){
         super.onCreate();
         if(!Settings.canDrawOverlays(this)){stopSelf();return;}
         wm=(WindowManager)getSystemService(WINDOW_SERVICE);
-        switchButton=new TextView(this);
-        switchButton.setGravity(Gravity.CENTER);
-        switchButton.setTextSize(14);
-        switchButton.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
-        switchButton.setPadding(dp(14),dp(9),dp(14),dp(9));
-        switchButton.setElevation(dp(3));
-        updateButton();
-        params=new WindowManager.LayoutParams(dp(172),dp(52),
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-                PixelFormat.TRANSLUCENT);
+        if(current!=null && current!=this)current.stopSelf();
+        bubble=new TextView(this);
+        bubble.setGravity(Gravity.CENTER);bubble.setTextSize(15);
+        bubble.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        bubble.setTextColor(0xffffffff);
+        bubble.setElevation(dp(9));
+        bubble.setContentDescription("Chạm để bật hoặc tắt tự động chơi; giữ và kéo để di chuyển");
+        params=new WindowManager.LayoutParams(dp(68),dp(68),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL|
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT);
         params.gravity=Gravity.TOP|Gravity.START;
-        params.x=dp(18);params.y=dp(112);
-        switchButton.setOnTouchListener(new View.OnTouchListener(){
-            float downX,downY; int x,y;
-            @Override public boolean onTouch(View v,MotionEvent e){
-                switch(e.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
-                        downX=e.getRawX();downY=e.getRawY();x=params.x;y=params.y;dragging=false;return true;
-                    case MotionEvent.ACTION_MOVE:
-                        float dx=e.getRawX()-downX,dy=e.getRawY()-downY;
-                        if(Math.abs(dx)>dp(9)||Math.abs(dy)>dp(9))dragging=true;
-                        if(dragging && wm!=null){
-                            params.x=x+(int)dx;params.y=y+(int)dy;
-                            try{wm.updateViewLayout(switchButton,params);}catch(Exception ignored){}
-                        }
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                        if(!dragging)onToggle();return true;
-                    default:return true;
-                }
+        params.x=dp(14);params.y=dp(120);
+        bubble.setOnTouchListener((v,e)->{
+            switch(e.getActionMasked()){
+                case MotionEvent.ACTION_DOWN:
+                    downX=e.getRawX();downY=e.getRawY();
+                    initialX=params.x;initialY=params.y;dragging=false;return true;
+                case MotionEvent.ACTION_MOVE:
+                    float dx=e.getRawX()-downX,dy=e.getRawY()-downY;
+                    if(Math.abs(dx)>dp(10)||Math.abs(dy)>dp(10))dragging=true;
+                    if(dragging&&wm!=null){
+                        params.x=Math.max(0,Math.min(getResources().getDisplayMetrics().widthPixels-dp(68),initialX+(int)dx));
+                        params.y=Math.max(0,Math.min(getResources().getDisplayMetrics().heightPixels-dp(68),initialY+(int)dy));
+                        try{wm.updateViewLayout(bubble,params);}catch(Exception ignored){}
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    if(!dragging)toggle();return true;
+                case MotionEvent.ACTION_CANCEL:return true;
+                default:return true;
             }
         });
-        try {wm.addView(switchButton,params);current=this;}
-        catch(Exception ex){switchButton=null;stopSelf();}
+        render();
+        try{wm.addView(bubble,params);current=this;}
+        catch(Exception ex){bubble=null;stopSelf();}
     }
-    private void onToggle(){
-        if (AutoControl.isEnabled()) {
-            AutoControl.stop();
-        } else if (!BotAccessibilityService.isAvailable()) {
-            Toast.makeText(this,"Bật dịch vụ 'MinhQuan điều khiển' trong Trợ năng",Toast.LENGTH_LONG).show();
-            try {
+    private void toggle(){
+        if(AutoControl.isEnabled()){
+            AutoControl.stop();toast("AUTO đã tắt");
+        }else if(!BotAccessibilityService.isAvailable()){
+            toast(accessibilityEnabledInSettings()
+                ? "Trợ năng đang bật nhưng dịch vụ chưa kết nối. Tắt rồi bật lại MinhQuan điều khiển."
+                : "Cấp quyền Trợ năng MinhQuan một lần, rồi quay lại Liên Quân");
+            try{
                 Intent i=new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-            } catch(Exception ex){Toast.makeText(this,"Không mở được Trợ năng",Toast.LENGTH_LONG).show();}
-        } else if (!BotAccessibilityService.isGameForeground()) {
-            Toast.makeText(this,"Vào trận luyện tập Liên Quân rồi bật AUTO CHƠI",Toast.LENGTH_LONG).show();
-        } else if (!AutoControl.start(this)) {
-            Toast.makeText(this,"Chưa thể khởi động bộ điều khiển",Toast.LENGTH_LONG).show();
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);startActivity(i);
+            }catch(Exception ex){toast("Không thể mở cài đặt Trợ năng");}
+        }else if(AutoControl.start(this)){
+            toast(BotAccessibilityService.isGameForeground()
+                ? "AUTO đã bật. Thử nghiệm điều khiển cơ bản."
+                : "AUTO đã bật; đang chờ màn hình Liên Quân");
+        }else{
+            toast("Không kích hoạt được. Hãy kiểm tra quyền Trợ năng.");
         }
-        updateButton();
+        render();
     }
-    private void updateButton(){
-        if(switchButton==null)return;
-        boolean on=AutoControl.isEnabled();
-        switchButton.setText(on ? "AUTO CHƠI  •  BẬT" : "AUTO CHƠI  •  TẮT");
-        switchButton.setTextColor(on?0xff061a15:0xff52ebbd);
+    private boolean accessibilityEnabledInSettings(){
+        try{
+            AccessibilityManager manager=(AccessibilityManager)getSystemService(ACCESSIBILITY_SERVICE);
+            if(manager==null)return false;
+            List<AccessibilityServiceInfo> services=manager.getEnabledAccessibilityServiceList(
+                AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            for(AccessibilityServiceInfo info:services){
+                if(info.getResolveInfo()!=null&&info.getResolveInfo().serviceInfo!=null
+                    &&getPackageName().equals(info.getResolveInfo().serviceInfo.packageName)
+                    &&BotAccessibilityService.class.getName().equals(
+                        info.getResolveInfo().serviceInfo.name))return true;
+            }
+        }catch(Exception ignored){}
+        return false;
+    }
+    private void toast(String message){Toast.makeText(this,message,Toast.LENGTH_LONG).show();}
+    private void render(){
+        if(bubble==null)return;
+        boolean enabled=AutoControl.isEnabled();
+        bubble.setText(enabled?"ON":"OFF");
         GradientDrawable d=new GradientDrawable();
-        d.setCornerRadius(dp(15));
-        d.setColor(on?0xff47e2ac:0xe8091917);
-        d.setStroke(dp(1),0xff32cfa1);
-        switchButton.setBackground(d);
+        d.setShape(GradientDrawable.OVAL);
+        d.setColor(enabled?0xff00a85c:0xffd53240);
+        d.setStroke(dp(2),enabled?0xffa3ffd1:0xffffb2bc);
+        bubble.setBackground(d);
+        bubble.setContentDescription("AUTO "+(enabled?"ON":"OFF")+". Chạm để đổi trạng thái");
     }
     public static void refresh(){
         EspOverlayService s=current;
-        if(s!=null && s.switchButton!=null)s.switchButton.post(s::updateButton);
+        if(s!=null && s.bubble!=null)s.bubble.post(s::render);
     }
     @Override public void onDestroy(){
         if(current==this)current=null;
         AutoControl.stop();
-        if(wm!=null && switchButton!=null){try{wm.removeView(switchButton);}catch(Exception ignored){}}
-        switchButton=null;
-        super.onDestroy();
+        if(wm!=null&&bubble!=null){try{wm.removeView(bubble);}catch(Exception ignored){}}
+        bubble=null;super.onDestroy();
     }
 }
