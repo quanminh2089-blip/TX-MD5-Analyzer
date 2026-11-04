@@ -151,6 +151,7 @@ background: rgba(150,180,255,0.6); animation-name: bootParticleUp; animation-tim
 display: block; position: absolute;
 top: 15px; bottom: 45px; left: 15px; right: 15px;
 background-color: #1a1a1a;
+background-image: url('wallpaper-user.jpg');
 background-size: cover;
 background-position: center;
 border-radius: 45px; overflow: hidden;
@@ -330,7 +331,7 @@ z-index: 10000; cursor: pointer; will-change: width, height, border-radius, tran
 #home-screen {
 position: absolute; top: 0; left: 0; width: 100%; height: 100%;
 display: none; z-index: 10; overflow: hidden;
-background-color: #222; background-size: cover; background-position: center;
+background-color: #222; background-image: url('wallpaper-user.jpg'); background-size: cover; background-position: center;
 opacity: 1; transform: scale(1); transition: opacity 0.32s ease, transform 0.55s var(--ios-spring-snappy);
 }
 /* Trang thai khoi tao truoc khi "nay" vao man hinh sau khi mo khoa */
@@ -5276,7 +5277,27 @@ maintenanceContent.setAttribute('aria-live', 'polite');
 maintenanceContent.innerHTML = '<div class="maintenance-ring"><i class="fa-solid fa-gear maintenance-gear-back"></i><i class="fa-solid fa-screwdriver-wrench maintenance-wrench"></i></div><div><div class="maintenance-title">ĐANG BẢO TRÌ</div><div class="maintenance-track"></div></div>';
 island.appendChild(maintenanceContent);
 ISLAND_STATE_WIDTH.maintenance = 310;
+// MAGICOS APK offline: the original Flask endpoints do not exist inside WebView.
+// Keep passcodes and admin controls, storing the simulated server switch locally.
 async function serverRequest(path, body) {
+  if (location.protocol === 'file:') {
+    let isOpen = localStorage.getItem('magicos_local_server_open') !== '0';
+    if (path === '/api/unlock') {
+      const valid = body && (body.passcode === '000000' || body.passcode === '081120');
+      return {allowed: Boolean(valid && (isOpen || body.passcode === '081120')),
+              open: isOpen, admin_token: body && body.passcode === '081120' ? 'local-admin' : ''};
+    }
+    if (path === '/api/server-state') {
+      if (body && typeof body.open === 'boolean') {
+        if (adminServerToken !== 'local-admin') throw new Error('admin_required');
+        isOpen = body.open;
+        localStorage.setItem('magicos_local_server_open', isOpen ? '1' : '0');
+      }
+      return {open: isOpen};
+    }
+    throw new Error('offline_endpoint_not_supported: ' + path);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 6000);
   try {
