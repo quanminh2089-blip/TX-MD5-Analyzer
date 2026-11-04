@@ -186,7 +186,7 @@ opacity: 1; transform: scale(1); transition: opacity 0.32s ease, transform 0.55s
 .page-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.35); transition: background 0.3s, transform 0.3s; }
 .page-dot.active { background: rgba(255,255,255,1); }
 
-#lock-screen-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9700; transition: transform 0.7s var(--ios-smooth), backdrop-filter 0.5s ease, background 0.5s ease; backdrop-filter: blur(0px); background: transparent; }
+#lock-screen-wrapper { background: url("wallpaper-user.jpg") center center / cover no-repeat !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 9700; transition: transform 0.7s var(--ios-smooth), backdrop-filter 0.5s ease, background 0.5s ease; backdrop-filter: blur(0px); background: transparent; }
 #lock-screen-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 80px; transition: opacity 0.3s ease, transform 0.5s var(--ios-spring-snappy); z-index: 51; }
 .ls-time { font-size: 80px; font-weight: 800; color: white; line-height: 1; text-shadow: 0 2px 10px rgba(0,0,0,0.2); letter-spacing: -2px; }
 .ls-date { font-size: 20px; font-weight: 600; color: rgba(255,255,255,0.9); margin-top: -5px; margin-bottom: 10px; text-shadow: 0 1px 5px rgba(0,0,0,0.2); }
@@ -990,7 +990,10 @@ body:not(.unlocked) #lock-screen-ui {touch-action:none;}
 
 #page-0 .app-grid { justify-content:flex-start; }
 </style>
-</head>
+<style id="magicos-147-frame">
+#phone-container { border: 2px solid rgba(215,222,242,.65) !important; border-radius: 44px !important; overflow: hidden !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,.14), 0 0 0 2px rgba(0,0,0,.55) !important; }
+#lock-screen-wrapper::before { content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12) 50%,rgba(0,0,0,.35)); pointer-events:none; }
+</style></head>
 <body>
 <div id="phone-container">
 <div class="screen-fade-overlay" id="screen-fade"></div>
@@ -4357,27 +4360,17 @@ function applyServerState(state) {
   }
   if (serverOpen && island.classList.contains('state-maintenance')) resetIsland();
 }
+// Offline MAGICOS unlock: no Flask/server call, and no removed Admin DOM dependencies.
 async function checkPasscode() {
   if (unlockBusy) return;
   const code = passcode.join('');
   if (code !== '081120') { completePasscode(); return; }
   unlockBusy = true;
-  const attempt = ++unlockGeneration;
-  pcTitle.innerText = 'Đang kiểm tra…';
-  try {
-    const result = await serverRequest('/api/unlock', {passcode:code});
-    if (attempt !== unlockGeneration) return;
-    applyServerState(result);
-    if (!result.allowed) { passcode = []; updateDots(); showMaintenance(); return; }
-    adminServerToken = result.admin_token || '';
-    completePasscode();
-  } catch (e) {
-    if (attempt !== unlockGeneration) return;
-    passcode = []; updateDots(); unlockBusy = false;
-    pcTitle.innerText = 'Mất kết nối. Vui lòng thử lại';
-    showNotification('Không thể kết nối server. Vui lòng thử lại.', 'error');
-  }
+  adminServerToken = 'local-admin';
+  serverOpen = true;
+  completePasscode();
 }
+
 async function toggleUserServer() {
   if (!adminModeUnlocked || serverToggleBusy || serverOpen === null) return;
   serverToggleBusy = true;
