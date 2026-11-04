@@ -1,0 +1,1 @@
+MAGICOS v1.4.6: removed the MAGICOS boot splash DOM, CSS and timer. Opens lock screen immediately. Restored essential phone UI accidentally removed in v1.4.5. Keeps Android MinhQuan startup/key unchanged. APK runtime not yet verified.

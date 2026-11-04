@@ -30,159 +30,6 @@ width: 100%; height: 100%; background-color: #000;
 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 overflow: hidden; touch-action: pan-x pan-y;
 }
-#boot-screen {
-position: absolute; top: 15px; bottom: 45px; left: 15px; right: 15px;
-background: radial-gradient(circle at 50% 40%, #171b2c 0%, #0a0c16 55%, #020207 100%);
-display: flex; flex-direction: column; justify-content: center; align-items: center;
-z-index: 99999; color: #fff; overflow: hidden;
-border-radius: 45px;
--webkit-mask-image: -webkit-radial-gradient(circle, #fff 100%, #fff 100%);
-mask-image: radial-gradient(circle, #fff 100%, #fff 100%);
-box-shadow: 0 0 0 2px #151515;
-transition: opacity 0.7s ease, filter 0.7s ease;
-}
-#boot-screen.boot-hide { opacity: 0; filter: blur(4px); pointer-events: none; transition: opacity 0.28s ease, filter 0.28s ease; }
-#boot-screen.boot-warp .boot-glow,
-#boot-screen.boot-warp .boot-glow-ring,
-#boot-screen.boot-warp .boot-wordmark,
-#boot-screen.boot-warp .boot-tagline,
-#boot-screen.boot-warp .boot-bar-track,
-#boot-screen.boot-warp #boot-particles {
-transition: opacity 0.18s ease; opacity: 0;
-}
-#boot-screen.boot-warp .boot-mark {
-animation: bootWarpZoom 0.5s cubic-bezier(0.55,0,0.85,0.35) forwards;
-will-change: transform, opacity;
-}
-@keyframes bootWarpZoom {
-0% { transform: scale(1) rotate(0deg); opacity: 1; }
-55% { transform: scale(2.6) rotate(6deg); opacity: 1; }
-100% { transform: scale(9) rotate(12deg); opacity: 0; }
-}
-#boot-flash {
-position: absolute; inset: 0; border-radius: inherit;
-background: radial-gradient(circle, #f3f7ff 0%, #9db8ff 45%, rgba(120,150,255,0) 75%);
-opacity: 0; pointer-events: none;
-}
-#boot-screen.boot-warp #boot-flash {
-animation: bootFlashPulse 0.62s ease-out forwards;
-}
-@keyframes bootFlashPulse {
-0% { opacity: 0; } 48% { opacity: 0; } 66% { opacity: 1; } 100% { opacity: 0; }
-}
-
-@keyframes screenArrive {
-0% { transform: scale(1.06); }
-100% { transform: scale(1); }
-}
-.boot-glow {
-position: absolute; width: 520px; height: 520px; border-radius: 50%;
-background: radial-gradient(circle, rgba(120,150,255,0.24) 0%, rgba(90,110,255,0.06) 45%, rgba(120,150,255,0) 72%);
-opacity: 0; animation: bootGlowIn 1.2s ease-out 0.1s forwards, bootGlowPulse 2.4s ease-in-out 1.3s infinite;
-}
-.boot-glow-ring {
-position: absolute; width: 250px; height: 250px; border-radius: 50%;
-border: 1px solid rgba(150,175,255,0.16);
-opacity: 0; animation: bootGlowIn 0.9s ease-out 0.25s forwards, bootRingSpin 16s linear infinite;
-}
-.boot-glow-ring::before {
-content: ""; position: absolute; top: -2.5px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px;
-border-radius: 50%; background: #aebdff; box-shadow: 0 0 10px 2px rgba(140,170,255,0.9);
-}
-@keyframes bootGlowIn { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
-@keyframes bootGlowPulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
-@keyframes bootRingSpin { to { transform: rotate(360deg); } }
-.boot-mark {
-position: relative; width: 104px; height: 104px; margin-bottom: 28px;
-opacity: 0; transform: scale(0.4) rotate(-25deg);
-animation: bootMarkIn 0.7s cubic-bezier(0.2,0.9,0.25,1.2) 0.2s forwards, bootMarkBreathe 2.6s ease-in-out 1.6s infinite;
-}
-.boot-mark svg { width: 100%; height: 100%; overflow: visible; }
-.boot-mark .bm-ring-soft { fill: none; stroke: rgba(150,175,255,0.14); stroke-width: 4.5; }
-.boot-mark .bm-ring { fill: none; stroke: url(#bootRingGrad); stroke-width: 4.5; stroke-linecap: round;
-stroke-dasharray: 251; stroke-dashoffset: 251; animation: bootRingDraw 0.9s cubic-bezier(0.4,0,0.2,1) 0.5s forwards; }
-.boot-mark .bm-glyph { opacity: 0; animation: bootFadeIn 0.5s ease 1.1s forwards; }
-.boot-mark .bm-glyph text { fill: url(#bootGlyphGrad); }
-.boot-mark .bm-spark { opacity: 0; transform-origin: 50px 50px;
-animation: bootFadeIn 0.35s ease 1.3s forwards, bootSparkOrbit 3.4s linear 1.65s infinite; }
-@keyframes bootMarkIn { to { opacity: 1; transform: scale(1) rotate(0deg); } }
-@keyframes bootMarkBreathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
-@keyframes bootRingDraw { to { stroke-dashoffset: 0; } }
-@keyframes bootFadeIn { to { opacity: 1; } }
-@keyframes bootSparkOrbit { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.boot-wordmark {
-font-size: 25px; font-weight: 800; letter-spacing: 5px; text-align: center;
-text-shadow: 0 0 18px rgba(140,170,255,0.55);
-}
-.boot-wordmark span {
-display: inline-block; opacity: 0; transform: translateY(10px);
-animation: bootLetterIn 0.45s ease forwards;
-background: linear-gradient(180deg, #ffffff 0%, #c3cfff 100%);
--webkit-background-clip: text; background-clip: text; color: transparent;
-}
-@keyframes bootLetterIn { to { opacity: 1; transform: translateY(0); } }
-.boot-tagline {
-margin-top: 10px; font-size: 11px; font-weight: 500; letter-spacing: 3px;
-color: rgba(255,255,255,0.45); text-transform: uppercase;
-opacity: 0; animation: bootTextIn 0.6s ease 1.85s forwards;
-}
-@keyframes bootTextIn { to { opacity: 1; transform: translateY(0); } }
-.boot-bar-track {
-position: relative; width: 150px; height: 3px; margin-top: 34px; border-radius: 3px;
-background: rgba(255,255,255,0.12); overflow: hidden;
-opacity: 0; animation: bootTextIn 0.4s ease 1.95s forwards;
-box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
-}
-.boot-bar-fill {
-position: absolute; left: 0; top: 0; height: 100%; width: 0%; border-radius: 3px;
-background: linear-gradient(90deg, #6a8dff, #b3c4ff, #6a8dff);
-background-size: 220% 100%; animation: bootBarFill 0.6s ease 2.05s forwards, bootBarShine 1.1s linear infinite;
-}
-@keyframes bootBarFill { to { width: 100%; } }
-@keyframes bootBarShine { 0% { background-position: 0% 0; } 100% { background-position: -220% 0; } }
-.boot-particle {
-position: absolute; bottom: -10px; width: 3px; height: 3px; border-radius: 50%;
-background: rgba(150,180,255,0.6); animation-name: bootParticleUp; animation-timing-function: ease-in; animation-iteration-count: infinite;
-}
-@keyframes bootParticleUp { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.8; } 100% { transform: translateY(-520px); opacity: 0; } }
-
-body.ipad-mode #home-indicator { width: 210px; }
-#status-bar { position: absolute; top: 0; left: 0; width: 100%; height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 0 25px; z-index: 9990; pointer-events: none; transition: opacity 0.3s ease; }
-.sb-left { font-size: 15px; font-weight: 600; color: white; letter-spacing: 0.5px; margin-top: 2px; transition: transform 0.4s var(--ios-spring-snappy); }
-.sb-right { display: flex; align-items: center; gap: 4px; transition: transform 0.4s var(--ios-spring-snappy); }
-.sb-icon { fill: white; color: white; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
-.sb-icon rect, .sb-icon path { transition: fill 0.3s ease; }
-.sb-battery { width: 34px; height: 16px; background-color: #fff; border-radius: 6px; position: relative; box-sizing: border-box; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.3); margin-left: 2px; transition: background-color 0.3s ease, box-shadow 0.3s ease; }
-.sb-battery::after { content: ""; position: absolute; right: -3px; top: 50%; transform: translateY(-50%); width: 3px; height: 7px; background-color: #fff; border-top-right-radius: 2px; border-bottom-right-radius: 2px; opacity: 0.9; transition: background-color 0.3s ease; }
-.sb-battery-level { color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: -0.3px; line-height: 1; z-index: 1; transition: color 0.3s ease; }
-.cc-indicator { position: absolute; top: 38px; right: 33px; width: 52px; height: 3px; background: rgba(255,255,255,0.6); border-radius: 3px; z-index: 2147482999; pointer-events: none; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-/* z-index cao hon lock-screen-wrapper (9700, dung cho man nhap mat ma + thanh thong bao) va
-   app-switcher (9000) de thanh ngang duoi wifi/pin/song KHONG bi cac lop nen mo/toi che mat;
-   van thap hon status-bar/Control Center (2147483000) nen Control Center mo ra van de len tren. */
-.sb-left, .sb-icon { transition: color 0.3s ease, border-color 0.3s ease, filter 0.3s ease; }
-#status-bar.status-bar-dark-content .sb-left { color: #000; text-shadow: none; }
-#status-bar.status-bar-dark-content .sb-icon rect,
-#status-bar.status-bar-dark-content .sb-icon path { fill: #000; }
-#status-bar.status-bar-dark-content .sb-icon { color: #000; filter: drop-shadow(0 1px 1px rgba(255,255,255,0.25)); }
-#status-bar.status-bar-dark-content .sb-battery { background-color: #000; box-shadow: none; }
-#status-bar.status-bar-dark-content .sb-battery::after { background-color: #000; }
-#status-bar.status-bar-dark-content .sb-battery-level { color: #fff; }
-#home-indicator-hitbox { position: absolute; bottom: 0; left: 0; width: 100%; height: 40px; z-index: 9999; display: none; cursor: pointer; }
-#home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 135px; height: 5px; background: white; border-radius: 100px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); pointer-events: none; transition: background 0.3s, transform 0.2s; }
-#home-indicator-hitbox:active #home-indicator { background: rgba(255,255,255,0.8); }
-#home-indicator.status-bar-dark-content { background: rgba(0,0,0,0.85); box-shadow: none; }
-#home-indicator-hitbox:active #home-indicator.status-bar-dark-content { background: rgba(0,0,0,0.6); }
-#control-center-hitbox { position: absolute; top: 0; left: 0; width: 100%; height: 55px; z-index: 9995; }
-#control-center {
-position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-border-radius: 45px; overflow: hidden; z-index: 9996;
-background: rgba(255,255,255,0.04);
-backdrop-filter: blur(32px) saturate(1.5);
--webkit-backdrop-filter: blur(32px) saturate(1.5);
-opacity: 0; pointer-events: none; transform: translateY(-100%) scale(0.94); filter: blur(6px);
-}
-#control-center.cc-animating { transition: transform 0.34s var(--ios-smooth), opacity 0.28s ease, filter 0.3s ease; }
-#control-center.open { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); filter: blur(0px); }
 .cc-top-row { position: absolute; top: 16px; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; color: #fff; }
 .cc-plus-btn { font-size: 24px; font-weight: 300; line-height: 1; }
 .cc-power-btn { font-size: 17px; }
@@ -1139,42 +986,390 @@ body:not(.unlocked) #lock-screen-ui {touch-action:none;}
 
 </style>
 <style>
-/* MAGICOS v1.4.3: removed home-screen apps; keep internal nodes for legacy JS compatibility */
+/* MAGICOS v1.4.6: boot removed; obsolete app elements not restored. */
 
 #page-0 .app-grid { justify-content:flex-start; }
 </style>
 </head>
 <body>
-<div id="boot-screen">
-<div class="boot-glow"></div>
-<div class="boot-glow-ring"></div>
-<div id="boot-particles"></div>
-<div class="boot-mark">
-<svg viewbox="0 0 100 100">
+<div id="phone-container">
+<div class="screen-fade-overlay" id="screen-fade"></div>
+<div id="status-bar">
+<div class="sb-left"><span id="sb-time">09:41</span></div>
+<div class="sb-right" id="sb-right">
+<div class="sb-icons-group" id="sb-icons-group">
+<svg class="sb-icon" fill="none" style="width: 18px;" viewbox="0 0 18 12" xmlns="http://www.w3.org/2000/svg">
+<rect fill="white" height="4" rx="1" width="3" y="8"></rect>
+<rect fill="white" height="7" rx="1" width="3" x="5" y="5"></rect>
+<rect fill="white" height="10" rx="1" width="3" x="10" y="2"></rect>
+<rect fill="white" height="12" rx="1" width="3" x="15"></rect>
+</svg>
+<i class="fa-solid fa-wifi sb-icon" style="width: 17px; font-size: 13px; line-height: 1; text-align: center;"></i>
+<div class="sb-battery">
+<span class="sb-battery-level">100</span>
+</div>
+</div>
+</div>
+</div>
+<div class="cc-indicator"></div>
+<div id="control-center-hitbox"></div>
+<div id="control-center">
+<div class="cc-top-row">
+<div class="cc-plus-btn">+</div>
+<div class="cc-power-btn"><i class="fa-solid fa-power-off"></i></div>
+</div>
+<div class="cc-status-row">
+<div class="cc-status-left">
+<svg class="cc-signal-icon" fill="none" viewbox="0 0 18 12" xmlns="http://www.w3.org/2000/svg">
+<rect fill="white" height="4" rx="1" width="3" y="8"></rect>
+<rect fill="white" height="7" rx="1" width="3" x="5" y="5"></rect>
+<rect fill="white" height="10" rx="1" width="3" x="10" y="2"></rect>
+<rect fill="white" height="12" rx="1" width="3" x="15"></rect>
+</svg>
+<span class="cc-network-label">5G</span>
+<i class="fa-solid fa-wifi cc-wifi-icon"></i>
+</div>
+<div class="cc-status-right">
+<div class="cc-battery">
+<span class="cc-battery-level">100%</span>
+</div>
+</div>
+</div>
+</div>
+<div id="home-screen">
+<div class="pages-wrapper" id="pages-wrapper">
+<div class="page" id="page-0">
+<div class="app-grid"><div class="app-icon" onclick="handlePenaltyIconTap(this);">
+<div class="app-box penalty-app-box">
+<svg viewbox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
 <defs>
-<lineargradient id="bootRingGrad" x1="0%" x2="100%" y1="0%" y2="100%">
-<stop offset="0%" stop-color="#8fa8ff"></stop>
-<stop offset="100%" stop-color="#cfd9ff"></stop>
-</lineargradient>
-<lineargradient id="bootGlyphGrad" x1="0%" x2="100%" y1="0%" y2="100%">
-<stop offset="0%" stop-color="#ffffff"></stop>
-<stop offset="100%" stop-color="#aebdff"></stop>
+<lineargradient id="penaltyGrad" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#27c96b"></stop>
+<stop offset="55%" stop-color="#0f9350"></stop>
+<stop offset="100%" stop-color="#0a6b3a"></stop>
 </lineargradient>
 </defs>
-<circle class="bm-ring-soft" cx="50" cy="50" r="40"></circle>
-<circle class="bm-ring" cx="50" cy="50" r="40"></circle>
-<g class="bm-glyph">
-<text font-family="-apple-system,Segoe UI,Arial,sans-serif" font-size="44" font-weight="800" text-anchor="middle" x="50" y="63">Q</text>
-<line stroke="#0a0c16" stroke-linecap="round" stroke-width="5.5" x1="33" x2="67" y1="67" y2="33"></line>
-<line stroke="url(#bootGlyphGrad)" stroke-linecap="round" stroke-width="2.6" x1="33" x2="67" y1="67" y2="33"></line>
+<rect fill="url(#penaltyGrad)" height="68" rx="16" width="68"></rect>
+<rect fill="none" height="66" rx="15" stroke="rgba(255,255,255,0.14)" stroke-width="1.5" width="66" x="1" y="1"></rect>
+<path d="M15 47 L15 19 L53 19 L53 47" fill="none" opacity="0.95" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"></path>
+<g stroke="#ffffff" stroke-opacity="0.5" stroke-width="1">
+<line x1="15" x2="53" y1="25" y2="25"></line>
+<line x1="15" x2="53" y1="31" y2="31"></line>
+<line x1="15" x2="53" y1="37" y2="37"></line>
+<line x1="15" x2="53" y1="43" y2="43"></line>
+<line x1="21.7" x2="21.7" y1="19" y2="47"></line>
+<line x1="28.3" x2="28.3" y1="19" y2="47"></line>
+<line x1="34" x2="34" y1="19" y2="47"></line>
+<line x1="39.7" x2="39.7" y1="19" y2="47"></line>
+<line x1="46.3" x2="46.3" y1="19" y2="47"></line>
 </g>
-<circle class="bm-spark" cx="90" cy="50" fill="#eaf0ff" r="3"></circle>
+<ellipse cx="34" cy="59" fill="rgba(0,0,0,0.28)" rx="10" ry="2.4"></ellipse>
+<circle cx="34" cy="52" fill="#fdfdfd" r="7.5"></circle>
+<circle cx="34" cy="52" fill="none" r="7.5" stroke="rgba(0,0,0,0.12)" stroke-width="1"></circle>
+<path d="M34 47.3l3.1 2.2-1.2 3.6h-3.8l-1.2-3.6z" fill="#161616"></path>
+<path d="M29.2 49.6l1.7 1.3M38.8 49.6l-1.7 1.3M31.6 56.4l0.8-2M36.4 56.4l-0.8-2" stroke="#161616" stroke-linecap="round" stroke-width="1"></path>
 </svg>
 </div>
-<div class="boot-wordmark"><span style="animation-delay:1.35s">M</span><span style="animation-delay:1.39s">A</span><span style="animation-delay:1.43s">G</span><span style="animation-delay:1.47s">I</span><span style="animation-delay:1.51s">C</span><span style="animation-delay:1.55s">O</span><span style="animation-delay:1.59s">S</span></div>
-<div class="boot-tagline">Powered by MAGICOS</div>
-<div class="boot-bar-track"><div class="boot-bar-fill"></div></div>
-<div id="boot-flash"></div>
+<span class="app-label">Penalty</span>
+</div>
+
+
+</div>
+</div>
+<div class="page" id="page-1">
+<div class="app-grid"><div class="app-icon" id="bank-app-icon" onclick="openAppFromIcon('app-bank', this); trackApp('app-bank');">
+<div class="app-box bk-app-box">
+<svg viewbox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+<defs><lineargradient id="bankIconGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#39e6c4"></stop><stop offset="100%" stop-color="#0a2647"></stop></lineargradient></defs>
+<rect fill="url(#bankIconGrad)" height="68" rx="17" width="68"></rect>
+<rect fill="none" height="66" rx="16" stroke="rgba(255,255,255,0.18)" width="66" x="1" y="1"></rect>
+<path d="M34 14 58 27H10Z" fill="#ffffff" opacity="0.92"></path>
+<rect fill="#ffffff" height="20" opacity="0.92" width="6" x="16" y="31"></rect>
+<rect fill="#ffffff" height="20" opacity="0.92" width="6" x="31" y="31"></rect>
+<rect fill="#ffffff" height="20" opacity="0.92" width="6" x="46" y="31"></rect>
+<rect fill="#ffffff" height="6" opacity="0.92" rx="2" width="48" x="10" y="53"></rect>
+</svg>
+</div>
+<span class="app-label">MagicBank</span>
+</div>
+<div class="app-icon" id="store-app-icon" onclick="openAppFromIcon('app-store', this); trackApp('app-store');">
+<div class="app-box st-app-box">
+<svg viewbox="0 0 68 68" xmlns="http://www.w3.org/2000/svg">
+<defs><lineargradient id="storeIconGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stop-color="#ffcf3f"></stop><stop offset="100%" stop-color="#a06bff"></stop></lineargradient></defs>
+<rect fill="url(#storeIconGrad)" height="68" rx="17" width="68"></rect>
+<rect fill="none" height="66" rx="16" stroke="rgba(255,255,255,0.18)" width="66" x="1" y="1"></rect>
+<path d="M14 22h40l-3 10H17Z" fill="#2b1600" opacity="0.85"></path>
+<rect fill="#2b1600" height="20" opacity="0.85" rx="3" width="34" x="17" y="32"></rect>
+<circle cx="27" cy="32" fill="none" r="4" stroke="#ffcf3f" stroke-width="2.4"></circle>
+<circle cx="41" cy="32" fill="none" r="4" stroke="#ffcf3f" stroke-width="2.4"></circle>
+</svg>
+</div>
+<span class="app-label">Cua Hang</span>
+</div></div>
+</div>
+</div>
+<div class="page-dots">
+<div class="page-dot active"></div>
+<div class="page-dot"></div>
+</div>
+
+</div>
+<div id="lock-screen-wrapper">
+<div id="lock-screen-ui">
+<div class="ls-date" id="ls-date">Thứ Tư, 1 tháng 4</div>
+<div class="ls-time" id="ls-time">09:41</div>
+<div class="ls-notif-toolbar">
+<button aria-label="Xóa tất cả thông báo" class="ls-notif-clearall" id="ls-notif-clearall" onclick="event.stopPropagation();clearAllNotifications()" type="button">
+<i class="fa-solid fa-trash-can"></i><span>Xóa tất cả</span>
+</button>
+</div>
+<div class="ls-notif-list" id="ls-notif-list"></div>
+<button aria-label="Đèn pin" class="ls-quick-btn ls-btn-left" id="lock-flash-btn" onclick="showWarning(event)" type="button">
+<svg fill="currentColor" height="18" viewbox="0 0 24 24" width="18">
+<path d="M7 2h10v3H7V2zm-1 4h12v2c0 1.1-.9 2-2 2h-8c-1.1 0-2-.9-2-2V6zm1.5 5h9c.8 0 1.5.7 1.5 1.5v8.5c0 1.4-1.1 2.5-2.5 2.5h-7c-1.4 0-2.5-1.1-2.5-2.5v-8.5c0-.8.7-1.5 1.5-1.5zM12 14c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+</svg>
+</button>
+<button aria-label="Camera" class="ls-quick-btn ls-btn-right" id="lock-camera-btn" onclick="showWarning(event)" type="button"><i class="fa-solid fa-camera"></i></button>
+</div>
+<div id="passcode-ui">
+<div class="pc-title" id="pc-title">Nhập mật mã</div>
+<div class="pc-dots" id="pc-dots">
+<div class="pc-dot"></div><div class="pc-dot"></div><div class="pc-dot"></div>
+<div class="pc-dot"></div><div class="pc-dot"></div><div class="pc-dot"></div>
+</div>
+<div class="pc-numpad">
+<div class="pc-btn" onclick="pressKey(1)"><div class="pc-num">1</div><div class="pc-letters"></div></div>
+<div class="pc-btn" onclick="pressKey(2)"><div class="pc-num">2</div><div class="pc-letters">ABC</div></div>
+<div class="pc-btn" onclick="pressKey(3)"><div class="pc-num">3</div><div class="pc-letters">DEF</div></div>
+<div class="pc-btn" onclick="pressKey(4)"><div class="pc-num">4</div><div class="pc-letters">GHI</div></div>
+<div class="pc-btn" onclick="pressKey(5)"><div class="pc-num">5</div><div class="pc-letters">JKL</div></div>
+<div class="pc-btn" onclick="pressKey(6)"><div class="pc-num">6</div><div class="pc-letters">MNO</div></div>
+<div class="pc-btn" onclick="pressKey(7)"><div class="pc-num">7</div><div class="pc-letters">PQRS</div></div>
+<div class="pc-btn" onclick="pressKey(8)"><div class="pc-num">8</div><div class="pc-letters">TUV</div></div>
+<div class="pc-btn" onclick="pressKey(9)"><div class="pc-num">9</div><div class="pc-letters">WXYZ</div></div>
+<div class="pc-action" onclick="cancelPasscode()">Hủy</div>
+<div class="pc-btn" onclick="pressKey(0)"><div class="pc-num">0</div><div class="pc-letters"></div></div>
+<div class="pc-btn empty"></div>
+</div>
+</div>
+</div>
+<div id="pt-modal-overlay">
+<div class="pt-card">
+<div class="pt-check-overlay" id="pt-check-overlay">
+<div class="pt-check-circle"><svg viewbox="0 0 24 24"><path d="M4 12l5 5L20 6"></path></svg></div>
+</div>
+<div class="pt-icon-wrap"><i class="fa-solid fa-key"></i></div>
+<div class="pt-title">Nhập Pass Token</div>
+<div class="pt-sub">Nhập vô đây</div>
+<div class="pt-input-wrap" id="pt-input-wrap">
+<input autocapitalize="characters" autocomplete="off" class="pt-input" id="pt-input" maxlength="24" onkeydown="if(event.key==='Enter'){confirmPassToken();}" placeholder="TOKEN" type="text"/>
+</div>
+<div class="pt-msg" id="pt-msg"></div>
+<div class="pt-actions">
+<button class="pt-btn pt-btn-confirm" id="pt-confirm-btn" onclick="confirmPassToken()" type="button"><span class="pt-lbl">Xác Nhận</span><span class="pt-spin"></span></button>
+<button class="pt-btn pt-btn-cancel" onclick="cancelPassToken()" type="button">Hủy</button>
+</div>
+</div>
+</div>
+<div id="app-switcher">
+<div class="sw-header">
+<span aria-hidden="true" class="sw-title-icon">
+<svg height="22" viewbox="0 0 28 28" width="22" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="swG1" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.55"></stop>
+</lineargradient>
+<lineargradient id="swG2" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.7"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="swG3" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.15"></stop>
+</lineargradient>
+</defs>
+<!-- 3 o vuong xep lech nhau, mo phong App Switcher icon cua Apple -->
+<rect fill="url(#swG3)" height="19" rx="4.5" stroke="rgba(255,255,255,0.25)" stroke-width="0.8" width="19" x="2.5" y="2.5"></rect>
+<rect fill="url(#swG2)" height="19" rx="4.5" stroke="rgba(255,255,255,0.35)" stroke-width="0.8" width="19" x="4.5" y="4.5"></rect>
+<rect fill="url(#swG1)" height="19" rx="4.5" stroke="rgba(255,255,255,0.5)" stroke-width="0.9" width="19" x="6.5" y="6.5"></rect>
+<circle cx="12.5" cy="11" fill="rgba(0,0,0,0.35)" r="1.2"></circle>
+<circle cx="16" cy="11" fill="rgba(0,0,0,0.35)" r="1.2"></circle>
+<rect fill="rgba(0,0,0,0.4)" height="1.2" rx="0.6" width="9" x="11.5" y="18"></rect>
+<rect fill="rgba(0,0,0,0.3)" height="1.2" rx="0.6" width="6" x="11.5" y="20.5"></rect>
+</svg>
+</span>
+<span class="sw-title">Switcher</span>
+</div>
+<div class="sw-stage" id="sw-stage">
+<div class="sw-stage-stack" id="sw-stage-stack"></div>
+<div class="sw-stage-panel" id="sw-stage-panel"></div>
+</div>
+<div class="sw-empty" id="sw-empty">
+<span aria-hidden="true" class="sw-empty-icon">
+<svg height="56" viewbox="0 0 64 64" width="56" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="empG" x1="0" x2="1" y1="0" y2="1">
+<stop offset="0%" stop-color="rgba(255,255,255,0.5)"></stop>
+<stop offset="100%" stop-color="rgba(255,255,255,0.15)"></stop>
+</lineargradient>
+</defs>
+<rect fill="url(#empG)" height="42" rx="9" stroke="rgba(255,255,255,0.25)" stroke-width="1.2" width="42" x="6" y="6"></rect>
+<rect fill="url(#empG)" height="42" rx="9" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" width="42" x="10" y="10"></rect>
+<rect fill="url(#empG)" height="42" rx="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.2" width="42" x="14" y="14"></rect>
+</svg>
+</span>
+<span>Không có ứng dụng nào đang mở</span>
+</div>
+<div class="sw-close-all" id="sw-close-all">Đóng tất cả</div>
+</div>
+<div class="state-default island-animating" id="dynamic-island">
+<div class="sensor-cam" id="sensor-default" style="position: relative;">
+<div id="island-lock-icon" style="position: absolute; left: 12px; opacity: 0; transform: scale(0.5); transition: all 0.4s var(--ios-spring-snappy); color: white; font-size: 11px;">
+<i class="fa-solid fa-lock"></i>
+</div>
+<div id="island-camera" style="width: 10px; height: 10px; border-radius: 50%; background: #000; box-shadow: inset 0 0 1px rgba(255,255,255,0.1); opacity:0.7; position: absolute; left: 20px; transition: transform 0.4s var(--ios-spring-snappy);"></div>
+<div style="width: 10px; height: 10px; border-radius: 50%; background: #08081a; box-shadow: inset 0 0 1px rgba(255,255,255,0.15); position: absolute; right: 8px;">
+<div style="width: 3px; height: 3px; border-radius: 50%; background: #2a3b5c; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.8;"></div>
+</div>
+</div>
+<div class="dynamic-content" id="content-faceid">
+<div class="face-icon-wrap">
+<div class="faceid-grid"></div>
+<div class="faceid-scanner"></div>
+<div class="face-icon"><i class="fa-solid fa-face-smile"></i></div>
+<div class="face-check"><i class="fa-solid fa-check"></i></div>
+<div class="face-lock"><i class="fa-solid fa-lock" id="face-lock-icon"></i></div>
+</div>
+<div id="face-text" style="font-size: 16px; font-weight: 600; color: #fff; transition: 0.3s;">Face ID</div>
+</div>
+<div class="dynamic-content" id="content-warning">
+<div class="warning-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+<div class="warning-text-wrap">
+<span class="warning-title">HỆ THỐNG THÔNG BÁO</span>
+<span class="warning-sub">THIẾT BỊ KHÔNG HỖ TRỢ</span>
+</div>
+</div>
+<div class="dynamic-content" id="content-call">
+<div class="call-info-zone" id="callInfoZone">
+<div class="call-icon-wrap"><i class="fa-solid fa-phone"></i></div>
+<div class="call-text-wrap">
+<span class="call-title">CUỘC GỌI ĐẾN</span>
+<span class="call-name" id="call-name-text">Số lạ</span>
+</div>
+<div class="call-wave"><span></span><span></span><span></span><span></span></div>
+</div>
+<div class="call-island-actions">
+<button aria-label="Từ chối" class="cia-btn cia-decline" id="islandDeclineBtn" type="button"><span class="cia-halo"></span><i class="fa-solid fa-phone"></i></button>
+<button aria-label="Trả lời" class="cia-btn cia-accept" id="islandAcceptBtn" type="button"><span class="cia-halo"></span><i class="fa-solid fa-phone"></i></button>
+</div>
+</div>
+<div class="dynamic-content" id="content-penalty">
+<i class="fa-solid fa-futbol"></i>
+<span id="penalty-live-badge-time">00:00</span>
+</div>
+</div>
+<div id="home-indicator-hitbox">
+<div id="home-indicator"></div>
+</div>
+<div class="simple-app" data-penalty-available="true" data-penalty-url="penalty.html" id="app-penalty">
+<iframe allow="autoplay" id="penalty-iframe" src="" title="Penalty"></iframe>
+<div class="penalty-loading" id="penalty-loading">
+<div class="pl-ball"></div>
+<span>Dang tai Penalty...</span>
+</div>
+<div class="penalty-offline" id="penalty-offline">
+<i class="fa-solid fa-triangle-exclamation"></i>
+<b>Không thể kết nối</b>
+</div>
+</div>
+
+
+
+<div class="simple-app" id="app-bank">
+<div class="bk-shell">
+<header class="bk-header"><div class="bk-brand">MAGIC<em>BANK</em></div></header>
+<div class="bk-balance-card">
+<div class="bk-balance-label">SỐ DƯ KHẢ DỤNG</div>
+<div class="bk-balance-value"><span class="bk-cur">$</span><span id="bk-balance-num">0</span></div>
+<div class="bk-balance-role" id="bk-role-tag">USD ACCOUNT</div>
+</div>
+<div class="bk-tabs">
+<button class="bk-tab active" data-tab="transfer" type="button">Chuyển khoản</button>
+<button class="bk-tab" data-tab="bills" type="button">Hoá đơn</button>
+<button class="bk-tab" data-tab="visa" type="button">Thẻ Visa</button>
+</div>
+<div class="bk-body">
+<section class="bk-pane active" id="bk-pane-transfer">
+<div class="bk-field"><label>Người nhận</label><input id="bk-transfer-to" placeholder="Tên tài khoản / username" type="text"/></div>
+<div class="bk-field"><label>Số tiền (USD)</label><input id="bk-transfer-amount" min="0" placeholder="0.00" step="0.01" type="number"/></div>
+<button class="bk-action-btn" id="bk-transfer-btn" type="button"><span class="lbl">Gửi tiền</span><span class="bk-spin"></span></button>
+<div class="bk-msg" id="bk-transfer-msg"></div>
+</section>
+<section class="bk-pane" id="bk-pane-bills">
+<div class="bk-bill-list" id="bk-bill-list"></div>
+</section>
+<section class="bk-pane" id="bk-pane-visa">
+<div class="bk-card-wrap">
+<div class="bk-visa-card" id="bk-visa-card">
+<div class="bk-visa-face bk-visa-front">
+<div class="bk-visa-chip"></div>
+<div class="bk-visa-shine"></div>
+<div class="bk-visa-number" id="bk-visa-number">•••• •••• •••• 4417</div>
+<div class="bk-visa-bottom">
+<div><div class="bk-visa-small">CHỦ THẺ</div><div class="bk-visa-holder" id="bk-visa-holder">MAGICBANK USER</div></div>
+<div><div class="bk-visa-small">HSD</div><div class="bk-visa-holder">12/29</div></div>
+<div class="bk-visa-logo">VISA</div>
+</div>
+</div>
+<div class="bk-visa-face bk-visa-back">
+<div class="bk-visa-stripe"></div>
+<div class="bk-visa-cvv-row"><span>CVV</span><span id="bk-visa-cvv">•••</span></div>
+<div class="bk-visa-logo" style="align-self:flex-end;margin-top:auto;">VISA</div>
+</div>
+</div>
+</div>
+<div class="bk-visa-hint">Chạm vào thẻ để xem CVV</div>
+</section>
+</div>
+</div>
+</div>
+<div class="simple-app" id="app-store">
+<div class="st-shell">
+<header class="st-header"><div class="st-brand">CỬA <em>HÀNG</em></div></header>
+<div class="st-views">
+<section class="st-view active" id="st-view-home">
+<button class="st-feature-card st-feature-pass" id="st-open-pass" type="button">
+<div class="st-feature-icon"><i class="fa-solid fa-ticket"></i></div>
+<div class="st-feature-text"><div class="st-feature-title">Pass Token</div></div>
+<i class="fa-solid fa-chevron-right st-feature-arrow"></i>
+</button>
+<button class="st-feature-card st-feature-exchange" id="st-open-exchange" type="button">
+<div class="st-feature-icon"><i class="fa-solid fa-coins"></i></div>
+<div class="st-feature-text"><div class="st-feature-title">Token MAGICAI</div></div>
+<i class="fa-solid fa-chevron-right st-feature-arrow"></i>
+</button>
+<div class="st-bank-mini"><i class="fa-solid fa-building-columns"></i><span>Số dư MagicBank: <b id="st-bank-balance">$0</b></span></div>
+</section>
+<section class="st-view" id="st-view-pass">
+<button class="st-back-btn" data-back="" type="button"><i class="fa-solid fa-arrow-left"></i> Quay lại</button>
+<div class="st-pass-grid" id="st-pass-grid"></div>
+</section>
+<section class="st-view" id="st-view-exchange">
+<button class="st-back-btn" data-back="" type="button"><i class="fa-solid fa-arrow-left"></i> Quay lại</button>
+<div class="st-exchange-card">
+<div class="st-exchange-label">SỐ TIỀN (USD)</div>
+<input class="st-exchange-input" id="st-exchange-input" min="0" placeholder="0.00" step="0.01" type="number"/>
+<div class="st-exchange-arrow"><i class="fa-solid fa-arrow-down-long"></i></div>
+<div class="st-exchange-label">NHẬN ĐƯỢC</div>
+<div class="st-exchange-result" id="st-exchange-result">0 Token</div>
+<button class="st-buy-btn" id="st-exchange-btn" type="button"><span class="lbl">Đổi ngay</span><span class="st-spin"></span></button>
+<div class="st-msg" id="st-exchange-msg"></div>
+</div>
+</section>
+</div>
+</div>
+</div>
 </div>
 
 <script>
@@ -1377,22 +1572,9 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-const bootScreen = document.getElementById('boot-screen');
 const tapFullscreenHint = document.getElementById('tap-fullscreen-hint');
 const phoneContainer = document.getElementById('phone-container');
 const screenFadeOverlay = document.getElementById('screen-fade');
-(function () {
-  const wrap = document.getElementById('boot-particles');
-  if (!wrap) return;
-  for (let i = 0; i < 22; i++) {
-    const p = document.createElement('div');
-    p.className = 'boot-particle';
-    p.style.left = (Math.random() * 100) + '%';
-    p.style.animationDuration = (2.6 + Math.random() * 2.2) + 's';
-    p.style.animationDelay = (Math.random() * 2.4) + 's';
-    wrap.appendChild(p);
-  }
-})();
 function attemptFullscreen() {
   if (document.fullscreenElement || document.webkitIsFullScreen) return;
   try {
@@ -1416,28 +1598,13 @@ function hideTapFullscreenHint() {
 });
 document.addEventListener('fullscreenchange', () => { if (document.fullscreenElement) hideTapFullscreenHint(); });
 document.addEventListener('webkitfullscreenchange', () => { if (document.webkitIsFullScreen) hideTapFullscreenHint(); });
+// MAGICOS v1.4.6: no boot overlay, enter lock screen immediately.
 function finishBoot() {
-  phoneContainer.style.display = 'block';
-  // Thanh da nhiem (home indicator) phai luon hien dien khi may da "bat" xong,
-  // ke ca khi con dang o man hinh khoa (giong hanh vi iOS that) - truoc day
-  // no chi duoc bat lai trong checkPasscode() nen sau khi khoi dong lai may
-  // (reboot / mat toan man hinh) se bi "mat" cho toi khi mo khoa xong.
-  document.getElementById('home-indicator-hitbox').style.display = 'block';
-  bootScreen.classList.add('boot-warp');
-  setTimeout(() => {
-    bootScreen.classList.add('boot-hide');
-    phoneContainer.classList.remove('boot-arrive');
-    void phoneContainer.offsetWidth;
-    phoneContainer.classList.add('boot-arrive');
-    setTimeout(() => {
-      bootScreen.style.display = 'none';
-      bootScreen.classList.remove('boot-warp');
-    }, 300);
-  }, 560);
-  showTapFullscreenHint();
-  attemptFullscreen();
+  if (phoneContainer) phoneContainer.style.display = 'block';
+  const indicator = document.getElementById('home-indicator-hitbox');
+  if (indicator) indicator.style.display = 'block';
 }
-setTimeout(finishBoot, 2750);
+finishBoot();
 function performFullReset() {
   isLsDragging = false; isNotifPeekOpen = false; setNotifSwipeHintVisible(true);
 
@@ -1508,19 +1675,7 @@ function lockToLockScreen() {
   passcodeUI.style.opacity = '0'; passcodeUI.style.pointerEvents = 'none'; passcodeUI.style.transform = 'scale(0.85)'; passcodeUI.style.filter = 'blur(15px)'; isPasscodeMode = false; passcode = []; updateDots(); pcTitle.innerText = "Nhập mật mã";
   document.getElementById('island-lock-icon').style.opacity = '0'; document.getElementById('island-lock-icon').style.transform = 'scale(0.5)'; document.getElementById('island-camera').style.transform = 'translateX(0)';
 }
-function replayBootAnimation() {
-  if (!bootScreen) return;
-  bootScreen.style.display = 'flex';
-  bootScreen.classList.remove('boot-hide');
-  bootScreen.classList.remove('boot-warp');
-  const nodes = bootScreen.querySelectorAll('*');
-  bootScreen.style.animation = 'none';
-  nodes.forEach((el) => { el.style.animation = 'none'; });
-  void bootScreen.offsetWidth;
-  bootScreen.style.animation = '';
-  nodes.forEach((el) => { el.style.animation = ''; });
-  setTimeout(finishBoot, 2750);
-}
+function replayBootAnimation() { finishBoot(); }
 function rebootDevice() {
   closeControlCenter();
   if (screenFadeOverlay) screenFadeOverlay.classList.add('active');
