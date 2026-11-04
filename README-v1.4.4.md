@@ -1,0 +1,1 @@
+MAGICOS v1.4.4: Removed Admin, MAGICAI and Phone app HTML nodes, home icons, dedicated CSS rules and bundled phone-app.html. Preserved MAGICOS unlock code 081120, Penalty local HTML, original splash/key and other apps. Legacy shared JavaScript remains to avoid runtime reference errors. Not APK-tested.
