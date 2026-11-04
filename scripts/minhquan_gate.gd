@@ -143,7 +143,7 @@ func _show_key() -> void:
     col.add_child(_label("Bấm Vào Nút Get Key Để Lấy Key Free", 15))
     counter = _label("-1s", 15, MUTED)
     col.add_child(counter)
-    key_input = _input("Nhập key MinhQuan")
+    key_input = _input("Nhập Key")
     col.add_child(key_input)
     var actions := HBoxContainer.new()
     actions.add_theme_constant_override("separation", 9)
@@ -156,6 +156,9 @@ func _show_key() -> void:
     actions.add_child(ok)
     message = _label("", 14, Color("#ff9c9c"))
     col.add_child(message)
+    col.add_child(_label("Admin: Nguyễn Minh Quân", 14, MUTED))
+    col.add_child(_label("Zalo: 0899174526", 14, MUTED))
+    col.add_child(_label("Telegram: @mquan08", 14, MUTED))
     seconds = 0
     _tick_key()
 
@@ -170,31 +173,7 @@ func _check_key() -> void:
     if key_input.text.strip_edges() != FREE_KEY:
         message.text = "Key không đúng"
         return
-    _show_login()
-
-func _show_login() -> void:
-    phase = "login"
-    _clear()
-    var card := _panel(480, 0)
-    center.add_child(card)
-    var col := _column(440, 10)
-    card.add_child(col)
-    col.add_child(_center_avatar(106))
-    col.add_child(_label("MINHQUAN", 31))
-    col.add_child(_label("Đăng nhập tài khoản", 22))
-    user_input = _input("Tên người dùng")
-    col.add_child(user_input)
-    password_input = _input("Mật khẩu", true)
-    col.add_child(password_input)
-    col.add_child(_button("ĐĂNG NHẬP", MINT, _check_account))
-    message = _label("", 14, Color("#ff9c9c"))
-    col.add_child(message)
-    col.add_child(_label("Admin: Nguyễn Minh Quân  •  Zalo: 0899174526", 13, MUTED))
-    col.add_child(_label("Telegram: @mquan08", 13, MUTED))
-
-func _check_account() -> void:
-    if user_input.text.strip_edges() != USER_NAME or password_input.text != PASSWORD:
-        message.text = "Sai tên người dùng hoặc mật khẩu"
-        return
     phase = "game"
+    MinhQuanOverlay.show_in_game()
     get_tree().change_scene_to_file("res://scenes/boot.tscn")
+
