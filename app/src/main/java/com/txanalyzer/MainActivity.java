@@ -12,6 +12,12 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.widget.RemoteViews;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -21,6 +27,7 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.LinearInterpolator;
@@ -34,13 +41,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 /**
- * MinhQuan v0.6 — native Android UI prototype.
- * Offline demo key only. No capture/OCR/betting/prediction functionality and no
- * account server or password storage/transfer in this build.
+ * MinhQuan v0.7 — native Android UI prototype.
+ * Offline key and account are for local demonstration only. No account server,
+ * network port scans, screen capture, prediction, or remote session is used.
+ * The Matrix panel is explicitly a VISUAL SIMULATION.
  */
 public class MainActivity extends Activity {
     private static final String DEMO_KEY = "FreeKey_MinhQuan";
-    private static final String CHANNEL_ID = "minhquan_login";
+    private static final String DEMO_USER = "MinhQuan08";
+    private static final String DEMO_HASH = "ef7fdfa1d814267f512e139b442628a00072953caa0f04b4f041229c446be3a2";
+    private static final String DEMO_SALT = "MinhQuan-local-demo-v0.7|";
+    private static final String CHANNEL_ID = "minhquan_login_v2";
     private static final int REQUEST_NOTIFICATIONS = 40;
     private static final long INTRO_MILLIS = 3000;
     private static final int BG = 0xff080e19;
@@ -59,6 +70,9 @@ public class MainActivity extends Activity {
     private Runnable introRunnable;
     private long counterStarted;
     private boolean keyAccepted = false;
+    private boolean consoleOpen = false;
+    private MatrixRainView rainView;
+    private Runnable consoleRunnable;
     private boolean notifyAfterPermission = false;
     private boolean isDestroyedNow = false;
 
@@ -104,7 +118,9 @@ public class MainActivity extends Activity {
         createNotificationChannel();
         if (state != null && state.getBoolean("keyAccepted", false)) {
             keyAccepted = true;
-            showAccountScreen();
+            consoleOpen = state.getBoolean("consoleOpen", false);
+            if (consoleOpen) showMatrixScreen();
+            else showAccountScreen();
         } else {
             showIntro();
             introRunnable = () -> {
@@ -178,33 +194,21 @@ public class MainActivity extends Activity {
         nameParams.topMargin = dp(13);
         root.addView(name, nameParams);
 
-        TextView tagline = text("KHÔNG GIAN THÀNH VIÊN", 11.5f, GREEN);
-        tagline.setGravity(Gravity.CENTER);
-        tagline.setLetterSpacing(0.14f);
-        LinearLayout.LayoutParams tagParams = new LinearLayout.LayoutParams(-1, -2);
-        tagParams.topMargin = dp(6);
-        root.addView(tagline, tagParams);
-
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(dp(20), dp(24), dp(20), dp(24));
         form.setBackground(outlined(PANEL, BORDER, 20));
         LinearLayout.LayoutParams formParams = new LinearLayout.LayoutParams(-1, -2);
-        formParams.topMargin = dp(43);
+        formParams.topMargin = dp(35);
         root.addView(form, formParams);
 
         TextView heading = text("Đăng nhập tài khoản", 20, WHITE);
         heading.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         form.addView(heading);
-        TextView subtitle = text("Chào mừng bạn đến với MinhQuan", 12.5f, MUTED);
-        LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(-1, -2);
-        subParams.topMargin = dp(5);
-        form.addView(subtitle, subParams);
-
         TextView userLabel = text("TÊN NGƯỜI DÙNG", 11.5f, MUTED);
         userLabel.setLetterSpacing(0.08f);
         LinearLayout.LayoutParams ulp = new LinearLayout.LayoutParams(-1, -2);
-        ulp.topMargin = dp(25);
+        ulp.topMargin = dp(21);
         form.addView(userLabel, ulp);
 
         EditText username = new EditText(this);
@@ -270,17 +274,194 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams loginParams = new LinearLayout.LayoutParams(-1, dp(52));
         loginParams.topMargin = dp(28);
         form.addView(login, loginParams);
-        login.setOnClickListener(v -> Toast.makeText(this,
-                "Đây là giao diện mẫu. Chức năng tài khoản chưa được kết nối.",
-                Toast.LENGTH_LONG).show());
+        login.setOnClickListener(v -> {
+            String enteredUser = username.getText().toString().trim();
+            String enteredPassword = password.getText().toString();
+            if (enteredUser.isEmpty()) {
+                username.setError("Nhập tên người dùng");
+                username.requestFocus();
+                return;
+            }
+            if (enteredPassword.isEmpty()) {
+                password.setError("Nhập mật khẩu");
+                password.requestFocus();
+                return;
+            }
+            if (verifyDemoAccount(enteredUser, enteredPassword)) {
+                hideKeyboard();
+                consoleOpen = true;
+                showMatrixScreen();
+            } else {
+                password.setText("");
+                password.setError("Thông tin đăng nhập không đúng");
+                Toast.makeText(this, "Tên người dùng hoặc mật khẩu không đúng", Toast.LENGTH_LONG).show();
+            }
+        });
 
-        TextView footnote = text("Giao diện đang phát triển • Chưa xác thực tài khoản", 11, MUTED);
-        footnote.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams fn = new LinearLayout.LayoutParams(-1, -2);
-        fn.topMargin = dp(21);
-        root.addView(footnote, fn);
+        LinearLayout contact = new LinearLayout(this);
+        contact.setOrientation(LinearLayout.VERTICAL);
+        contact.setGravity(Gravity.CENTER);
+        contact.setPadding(dp(12), dp(14), dp(12), dp(14));
+        LinearLayout.LayoutParams contactParams = new LinearLayout.LayoutParams(-1, -2);
+        contactParams.topMargin = dp(20);
+        root.addView(contact, contactParams);
+        String[] contacts = {
+                "Admin: Nguyễn Minh Quân",
+                "Zalo: 0899174526",
+                "Telegram: @mquan08"
+        };
+        for (String line : contacts) {
+            TextView item = text(line, 12.3f, MUTED);
+            item.setGravity(Gravity.CENTER);
+            item.setPadding(0, dp(3), 0, dp(3));
+            contact.addView(item, new LinearLayout.LayoutParams(-1, -2));
+        }
 
         setContentView(scroll);
+    }
+
+    /** Offline demonstration credential check; NOT a secure production login. */
+    private boolean verifyDemoAccount(String username, String password) {
+        if (!DEMO_USER.equals(username)) return false;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest((DEMO_SALT + username + "|" + password)
+                    .getBytes(StandardCharsets.UTF_8));
+            StringBuilder result = new StringBuilder();
+            for (byte b : bytes) result.append(String.format(java.util.Locale.ROOT, "%02x", b & 255));
+            return MessageDigest.isEqual(result.toString().getBytes(StandardCharsets.UTF_8),
+                    DEMO_HASH.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException ex) {
+            return false;
+        }
+    }
+
+    private void hideKeyboard() {
+        android.view.inputmethod.InputMethodManager keyboard =
+                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (keyboard != null && getCurrentFocus() != null)
+            keyboard.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+    }
+
+    /** Terminal aesthetic only — all ports and handshakes below are simulated. */
+    private void showMatrixScreen() {
+        if (consoleRunnable != null) handler.removeCallbacks(consoleRunnable);
+        if (rainView != null) rainView.stop();
+        FrameLayout screen = new FrameLayout(this);
+        screen.setBackgroundColor(0xff030b0c);
+        rainView = new MatrixRainView(this);
+        screen.addView(rainView, new FrameLayout.LayoutParams(-1, -1));
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        screen.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER_HORIZONTAL);
+        layout.setPadding(dp(19), dp(23), dp(19), dp(25));
+        scroll.addView(layout);
+
+        ImageView logo = avatar(76);
+        layout.addView(logo);
+        TextView head = text("MINHQUAN // TERMINAL", 19, 0xffd7fff0);
+        head.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+        head.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams hlp = new LinearLayout.LayoutParams(-1,-2);
+        hlp.topMargin = dp(10);
+        layout.addView(head,hlp);
+        TextView sub = text("SYSTEM VISUALIZATION • LOCAL DEMO", 10.5f, GREEN);
+        sub.setTypeface(Typeface.MONOSPACE);
+        sub.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(-1,-2);
+        slp.topMargin=dp(5);
+        layout.addView(sub,slp);
+
+        LinearLayout terminal = new LinearLayout(this);
+        terminal.setOrientation(LinearLayout.VERTICAL);
+        terminal.setPadding(dp(15),dp(15),dp(15),dp(16));
+        terminal.setBackground(outlined(0xed061b18,0xff176d54,15));
+        LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(-1,-2);
+        tLp.topMargin = dp(24);
+        layout.addView(terminal,tLp);
+        LinearLayout toolbar = new LinearLayout(this);
+        toolbar.setOrientation(LinearLayout.HORIZONTAL);
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        terminal.addView(toolbar,new LinearLayout.LayoutParams(-1,dp(28)));
+        for (int c : new int[]{0xfff36e62,0xffefbd50,0xff3eeaa5}) {
+            TextView dot = text("●",14,c);
+            dot.setPadding(0,0,dp(7),0);
+            toolbar.addView(dot);
+        }
+        TextView label=text("  minhquan@local  ~  demo",11,0xff89eecb);
+        label.setTypeface(Typeface.MONOSPACE);
+        toolbar.addView(label);
+        View separator = new View(this);
+        separator.setBackgroundColor(0xff1d664f);
+        LinearLayout.LayoutParams sepLp = new LinearLayout.LayoutParams(-1,dp(1));
+        sepLp.topMargin=dp(4);sepLp.bottomMargin=dp(11);
+        terminal.addView(separator,sepLp);
+        TextView log = text("",11.5f,0xffb0ffd8);
+        log.setTypeface(Typeface.MONOSPACE);
+        log.setLineSpacing(dp(4),1.0f);
+        log.setMinHeight(dp(218));
+        terminal.addView(log,new LinearLayout.LayoutParams(-1,-2));
+
+        TextView state = text("● ĐANG KHỞI TẠO MÔ PHỎNG",11.5f,0xffffd18f);
+        state.setGravity(Gravity.CENTER);
+        state.setTypeface(Typeface.MONOSPACE);
+        LinearLayout.LayoutParams stateLp = new LinearLayout.LayoutParams(-1,-2);
+        stateLp.topMargin=dp(19);
+        layout.addView(state,stateLp);
+        TextView hint = text("Các cổng và trạng thái chỉ là hiệu ứng hiển thị. Ứng dụng không thực hiện kết nối hoặc quét mạng.",11,MUTED);
+        hint.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams hintLp = new LinearLayout.LayoutParams(-1,-2);
+        hintLp.topMargin=dp(12);
+        layout.addView(hint,hintLp);
+
+        Button exit = new Button(this);
+        exit.setAllCaps(false);
+        exit.setText("Trở về đăng nhập");
+        exit.setTextSize(13);
+        exit.setTextColor(0xffdbfff0);
+        exit.setBackgroundTintList(ColorStateList.valueOf(0xff174b3f));
+        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams(-1,dp(46));
+        backLp.topMargin=dp(24);
+        layout.addView(exit,backLp);
+        exit.setOnClickListener(v -> {
+            consoleOpen=false;
+            if (consoleRunnable != null) handler.removeCallbacks(consoleRunnable);
+            if (rainView != null) rainView.stop();
+            rainView=null;
+            showAccountScreen();
+        });
+        setContentView(screen);
+        String[] messages = new String[]{
+                "$ minhquan --init --visual",
+                "[00] AUTH TOKEN ... VALID (LOCAL)",
+                "[01] RENDER ENGINE ... READY",
+                "[02] MATRIX STREAM ... ONLINE (DEMO)",
+                "[03] PORT 443/TCP ... OPEN (SIMULATED)",
+                "[04] PORT 8080/TCP ... OPEN (SIMULATED)",
+                "[05] PORT 9001/TCP ... OPEN (SIMULATED)",
+                "[06] UI CHANNEL ... SYNCHRONIZED",
+                "[07] SESSION ... GRANTED (LOCAL DEMO)",
+                ">> MINHQUAN VISUAL CONSOLE READY  _"
+        };
+        StringBuilder buffer = new StringBuilder();
+        final int[] step = {0};
+        consoleRunnable = new Runnable() {
+            @Override public void run() {
+                if (isDestroyedNow || !consoleOpen || step[0] >= messages.length) return;
+                buffer.append(messages[step[0]++]).append("\n");
+                log.setText(buffer.toString());
+                if (step[0] < messages.length) {
+                    handler.postDelayed(this, 430);
+                } else {
+                    state.setText("● MÔ PHỎNG HOÀN TẤT • HỆ THỐNG SẴN SÀNG");
+                    state.setTextColor(GREEN);
+                }
+            }
+        };
+        handler.postDelayed(consoleRunnable, 200);
     }
 
     /** Small central key dialog. Counter starts at -1s then -2s, -3s, ... */
@@ -409,7 +590,7 @@ public class MainActivity extends Activity {
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-            NotificationChannel c = new NotificationChannel(CHANNEL_ID, "Thông báo MinhQuan", NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel c = new NotificationChannel(CHANNEL_ID, "MinhQuan • Đăng nhập", NotificationManager.IMPORTANCE_DEFAULT);
             c.setDescription("Xác nhận đăng nhập key trong ứng dụng MinhQuan");
             manager.createNotificationChannel(c);
         }
@@ -433,11 +614,20 @@ public class MainActivity extends Activity {
         open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pending = PendingIntent.getActivity(this, 0, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Bitmap logo = BitmapFactory.decodeResource(getResources(), R.drawable.minhquan_avatar);
+        RemoteViews compact = new RemoteViews(getPackageName(), R.layout.notification_login);
+        compact.setImageViewResource(R.id.notification_avatar, R.drawable.minhquan_avatar);
+        compact.setTextViewText(R.id.notification_title, "MinhQuan");
+        compact.setTextViewText(R.id.notification_message, "ĐĂNG NHẬP APP THÀNH CÔNG✅");
         Notification notification = new Notification.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setLargeIcon(logo)
                 .setContentTitle("MinhQuan")
                 .setContentText("ĐĂNG NHẬP APP THÀNH CÔNG✅")
-                .setStyle(new Notification.BigTextStyle().bigText("ĐĂNG NHẬP APP THÀNH CÔNG✅"))
+                .setStyle(new Notification.DecoratedCustomViewStyle())
+                .setCustomContentView(compact)
+                .setCustomBigContentView(compact)
+                .setColor(GREEN)
                 .setAutoCancel(true)
                 .setContentIntent(pending)
                 .build();
@@ -460,6 +650,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle state) {
         state.putBoolean("keyAccepted", keyAccepted);
+        state.putBoolean("consoleOpen", consoleOpen);
         super.onSaveInstanceState(state);
     }
 
@@ -469,6 +660,8 @@ public class MainActivity extends Activity {
         if (introRunnable != null) handler.removeCallbacks(introRunnable);
         stopAvatarSpin();
         stopKeyCounter();
+        if (consoleRunnable != null) handler.removeCallbacks(consoleRunnable);
+        if (rainView != null) rainView.stop();
         if (keyDialog != null) {
             keyDialog.setOnDismissListener(null);
             if (keyDialog.isShowing()) keyDialog.dismiss();

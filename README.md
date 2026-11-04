@@ -1,32 +1,17 @@
-# MinhQuan v0.6 — Android UI prototype
+# MinhQuan v0.7 — Android UI prototype
 
-This source tree replaces the previous TX-MD5 Analyzer feature prototype. It now contains **only the MinhQuan UI flow**, with no screen capture, OCR, game history reader, prediction, overlays, or background service.
+This version contains only presentation and **offline demo** login flows. No Tài/Xỉu/MD5 predictor, OCR, screen capture, overlays, real backend authentication, network port scanning or server connection.
 
-## Flow
+## Changes
+- Splash: small black-background loading card with spinning green mask avatar, 3 seconds.
+- Free demo key: `FreeKey_MinhQuan`; key dialog retains increasing counter -1s, -2s, ...
+- Account page: removed the subtitle and welcome line, added Admin / Zalo / Telegram contact details.
+- Offline demo login: The username and password specified by the owner are checked locally. Only a SHA-256 digest is embedded, not the plaintext password. This is **not secure real-user authentication**; any shipped local credential can be extracted/bypassed. Never use real secrets here.
+- Login success opens an animated hacker-style **local visual simulation**: Matrix falling characters and simulated virtual-port success messages (no actual network connections).
+- Key accepted notification: `ĐĂNG NHẬP APP THÀNH CÔNG✅` with a compact custom Android notification featuring the app avatar to the left of the message (exact appearance controlled by Android/OEM and notification settings).
 
-1. Launch app: solid black screen + a compact 174 x 100 dp loading card with a circular rotating green-mask avatar, for three seconds. No logo/text behind the loading card. The loading caption is visual only (no server request).
-2. The centered **MinhQuan'z** key dialog appears. The displayed timer counts elapsed seconds (`-1s`, `-2s`, etc.). `Get Key` fills the local demo key `FreeKey_MinhQuan`; `OK` validates the key locally.
-3. After a correct key, MinhQuan requests notification permission on Android 13+ if needed and sends **ĐĂNG NHẬP APP THÀNH CÔNG✅** when permitted. If notifications are blocked by the user or device, it cannot send them.
-4. The screen below the dialog is the new member login UI: green-mask avatar at the top and styled username/password fields in a central card. This is **UI only**. The login button shows a placeholder message; no accounts, remote validation, or password transmission/storage have been implemented.
+## Build with GitHub Actions
+Upload the contents (not an extra enclosing folder) into the existing repository on main. The provided `.github/workflows/android-build.yml` builds a debug APK and uploads `MinhQuan-debug` as an artifact.
 
-## Upgrade the existing GitHub repo from Termux
-
-After downloading this ZIP into `~/storage/downloads`:
-
-```bash
-cd ~/TX-MD5-Analyzer/TX-MD5-Analyzer
-git pull --ff-only origin main
-rm -f app/src/main/java/com/txanalyzer/CaptureService.java app/src/main/java/com/txanalyzer/HistoryReader.java
-unzip -o ~/storage/downloads/MinhQuan-Android-v0.6-source.zip -d .
-git add -A
-git commit -m "MinhQuan v0.6 new login UI and notification"
-git push origin main
-```
-
-The repository's GitHub Actions workflow builds an Android debug APK and publishes artifact `MinhQuan-debug` when successful. Installations can update older apps because the application ID stays `com.txanalyzer` (a different signing key may prevent an in-place install).
-
-## Notes
-
-- Notification permission is explicitly requested after accepting the key. A successful local key entry does not imply real server login.
-- There is no prediction or gambling-related function.
-- This ZIP is source code, not a prebuilt APK. Building/testing the app on an Android device is still required.
+## Important
+The ZIP is **source code**, not a built or device-tested APK. The custom notification may be rendered differently by different Android versions and skins. Notification permission must be granted on Android 13+ to display it.
