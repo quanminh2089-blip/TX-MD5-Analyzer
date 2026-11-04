@@ -2,7 +2,6 @@ package com.txanalyzer;
 
 import android.app.Service;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
@@ -11,69 +10,97 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
-/** Overlay compatibility test only. No game memory access or enemy detection. */
-public class EspOverlayService extends Service {
-    private static boolean running;
+/** Minimal one-switch overlay. Touch to toggle; drag to reposition. */
+public final class EspOverlayService extends Service {
+    private static EspOverlayService current;
     private WindowManager wm;
-    private View panel;
+    private TextView switchButton;
     private WindowManager.LayoutParams params;
-    public static boolean isRunning() { return running; }
-    private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + .5f); }
-    @Override public IBinder onBind(Intent i) { return null; }
-    @Override public void onCreate() {
+    private boolean dragging;
+    private int dp(float v){return (int)(v * getResources().getDisplayMetrics().density + .5f);}
+    @Override public IBinder onBind(Intent i){return null;}
+    @Override public void onCreate(){
         super.onCreate();
-        if (!Settings.canDrawOverlays(this)) { stopSelf(); return; }
-        wm = (WindowManager)getSystemService(WINDOW_SERVICE);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(12),dp(10),dp(12),dp(10));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xe6081819); bg.setCornerRadius(dp(14)); bg.setStroke(dp(1),0xff27d89b);
-        root.setBackground(bg);
-        TextView title = new TextView(this);
-        title.setText("◈ MINHQUAN · OVERLAY TEST"); title.setTextColor(0xff48f6b1);
-        title.setTextSize(12); title.setGravity(Gravity.CENTER);
-        root.addView(title);
-        TextView status = new TextView(this);
-        status.setText("LỚP PHỦ HOẠT ĐỘNG\nESP TƯỚNG ẨN: CHƯA CÓ DỮ LIỆU\nChạm giữ để di chuyển");
-        status.setTextColor(Color.WHITE); status.setTextSize(11);
-        status.setGravity(Gravity.CENTER); status.setPadding(0,dp(9),0,dp(9));
-        root.addView(status);
-        TextView close = new TextView(this);
-        close.setText("✕ ĐÓNG"); close.setTextColor(0xfff9b4b4);
-        close.setGravity(Gravity.CENTER); close.setPadding(0,dp(5),0,dp(4));
-        root.addView(close); close.setOnClickListener(v -> stopSelf());
-        params = new WindowManager.LayoutParams(dp(246),WindowManager.LayoutParams.WRAP_CONTENT,
+        if(!Settings.canDrawOverlays(this)){stopSelf();return;}
+        wm=(WindowManager)getSystemService(WINDOW_SERVICE);
+        switchButton=new TextView(this);
+        switchButton.setGravity(Gravity.CENTER);
+        switchButton.setTextSize(14);
+        switchButton.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+        switchButton.setPadding(dp(14),dp(9),dp(14),dp(9));
+        switchButton.setElevation(dp(3));
+        updateButton();
+        params=new WindowManager.LayoutParams(dp(172),dp(52),
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL |
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = dp(20); params.y = dp(130);
-        root.setOnTouchListener(new View.OnTouchListener() {
-            float startX,startY; int initialX,initialY;
-            @Override public boolean onTouch(View v, MotionEvent event) {
-                switch(event.getActionMasked()) {
+        params.gravity=Gravity.TOP|Gravity.START;
+        params.x=dp(18);params.y=dp(112);
+        switchButton.setOnTouchListener(new View.OnTouchListener(){
+            float downX,downY; int x,y;
+            @Override public boolean onTouch(View v,MotionEvent e){
+                switch(e.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN:
-                        startX=event.getRawX();startY=event.getRawY();initialX=params.x;initialY=params.y;return true;
+                        downX=e.getRawX();downY=e.getRawY();x=params.x;y=params.y;dragging=false;return true;
                     case MotionEvent.ACTION_MOVE:
-                        params.x=initialX+(int)(event.getRawX()-startX);
-                        params.y=initialY+(int)(event.getRawY()-startY);
-                        if(wm!=null)wm.updateViewLayout(panel,params);
+                        float dx=e.getRawX()-downX,dy=e.getRawY()-downY;
+                        if(Math.abs(dx)>dp(9)||Math.abs(dy)>dp(9))dragging=true;
+                        if(dragging && wm!=null){
+                            params.x=x+(int)dx;params.y=y+(int)dy;
+                            try{wm.updateViewLayout(switchButton,params);}catch(Exception ignored){}
+                        }
                         return true;
+                    case MotionEvent.ACTION_UP:
+                        if(!dragging)onToggle();return true;
                     default:return true;
                 }
             }
         });
-        panel=root;
-        try { wm.addView(panel,params); running=true; }
-        catch(Exception ex) { panel=null;stopSelf(); }
+        try {wm.addView(switchButton,params);current=this;}
+        catch(Exception ex){switchButton=null;stopSelf();}
     }
-    @Override public void onDestroy() {
-        running=false;
-        if(panel!=null && wm!=null) { try { wm.removeView(panel); } catch(Exception ignored) {} }
-        panel=null;super.onDestroy();
+    private void onToggle(){
+        if (AutoControl.isEnabled()) {
+            AutoControl.stop();
+        } else if (!BotAccessibilityService.isAvailable()) {
+            Toast.makeText(this,"Bật dịch vụ 'MinhQuan điều khiển' trong Trợ năng",Toast.LENGTH_LONG).show();
+            try {
+                Intent i=new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch(Exception ex){Toast.makeText(this,"Không mở được Trợ năng",Toast.LENGTH_LONG).show();}
+        } else if (!BotAccessibilityService.isGameForeground()) {
+            Toast.makeText(this,"Vào trận luyện tập Liên Quân rồi bật AUTO CHƠI",Toast.LENGTH_LONG).show();
+        } else if (!AutoControl.start(this)) {
+            Toast.makeText(this,"Chưa thể khởi động bộ điều khiển",Toast.LENGTH_LONG).show();
+        }
+        updateButton();
+    }
+    private void updateButton(){
+        if(switchButton==null)return;
+        boolean on=AutoControl.isEnabled();
+        switchButton.setText(on ? "AUTO CHƠI  •  BẬT" : "AUTO CHƠI  •  TẮT");
+        switchButton.setTextColor(on?0xff061a15:0xff52ebbd);
+        GradientDrawable d=new GradientDrawable();
+        d.setCornerRadius(dp(15));
+        d.setColor(on?0xff47e2ac:0xe8091917);
+        d.setStroke(dp(1),0xff32cfa1);
+        switchButton.setBackground(d);
+    }
+    public static void refresh(){
+        EspOverlayService s=current;
+        if(s!=null && s.switchButton!=null)s.switchButton.post(s::updateButton);
+    }
+    @Override public void onDestroy(){
+        if(current==this)current=null;
+        AutoControl.stop();
+        if(wm!=null && switchButton!=null){try{wm.removeView(switchButton);}catch(Exception ignored){}}
+        switchButton=null;
+        super.onDestroy();
     }
 }
