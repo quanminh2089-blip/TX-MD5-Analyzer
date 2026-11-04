@@ -1,22 +1,19 @@
-# TX MD5 Analyzer — Smart History Reader v0.2 (Android)
+# MinhQuan — Android v0.3 (Source)
 
-This is a native Android proof-of-concept. Its screen-capture foreground service uses Android MediaProjection **with explicit user consent**, locally running ML Kit OCR, and a game-layout-specific chip detector (white = Xỉu, gold = Tài). No game login, injection, interception, transmission or betting automation is included.
+Native Android Java app, from TX-MD5-Analyzer Smart v0.2.
 
-## What changed
-- A small draggable TX floating bubble; tap to expand results, tap heading to collapse, or use Stop.
-- Auto-orients portrait screenshots of sideways landscape games by trying -90°/90° (and landscape 0°/180°) during OCR.
-- Detects the game panel containing **LỊCH SỬ PHIÊN**; scans the visible history-board gold/white chip grid in column order (20 columns × 5 rows) and attempts an additional enlarged OCR pass for the number inside each chip.
-- Parses displayed aggregate counts `Tài:27` / `Xỉu:23` when recognizable; these refer to the game's reported larger summary and are not assumed to equal visible-grid chip counts.
-- Shows `T`/`X` for the chip's class, plus the number only when OCR confirms a plausible value consistent with the chip color. `?` means no confident OCR reading.
-- On-screen updates are automatic roughly every 1.7 seconds (longer if OCR takes time); no guarantee of instantaneous or correct OCR on every device.
-- Refreshes screen capture dimensions when device orientation changes, without attempting another createVirtualDisplay on the same projection token.
+## Startup / icon
+- Launcher icon and round avatar: exact mask image supplied by the user, centered/cropped as an Android image resource.
+- Animated splash: circular avatar rotating for **3 seconds**, then a small dark key window **centered within the app** (not a third-party floating permission overlay).
+- Free **offline demo key**: `FreeKey_MinhQuan`; tap **Lấy key** to auto-fill, then tap **XÁC NHẬN**. This local UI demo is **not** secure authentication, does not contact a server, and is not a subscription/license system.
+- After that: start screen-reading, stop, or open the history-reading bubble with user-granted Android overlay and MediaProjection permissions.
+- The capture service remains the Smart v0.2 automatic history reader (ML Kit OCR and chip detection).
 
-## Build with GitHub Actions
-Copy the project files into the root of your existing GitHub repository (including `.github/workflows/android-build.yml`) and push to `main`. `Build Android APK` runs `gradle :app:assembleDebug`; download the `TX-MD5-Analyzer-debug` artifact if successful.
+## Android privacy and limitations
+- Only captures after user manually approves Android screen-sharing permissions.
+- No login to the game, network/key checking, or app-injection. No automated betting.
+- Recognizes past visible results. No guarantee it predicts future dice outcomes from MD5.
+- The screen-rotation/detection logic needs device testing, and real APK compilation has not been verified here.
 
-## Known limits
-- **Not tested as an APK on a physical Android phone.** Compile/run must be verified in GitHub Actions and on the user's device.
-- History chip geometry is calibrated to the provided screenshot at 1536×691 in landscape orientation. On different game skins, browsers or screen aspect ratios it may not detect the grid. It deliberately reports low-confidence detection instead of manufacturing values.
-- Text OCR may miss small values and summary labels or mistake game labels for text. Number recognition requires manual validation against the game.
-- A screenshot of a historical result cannot predict future results from a cryptographic hash or a properly random backend. This is a **descriptive history reader, not a next-round predictor or wagering signal**.
-- Capturing screen content involves sensitive information. Do not run with other private apps visible. Screen capture ends when service stops.
+## Build APK using GitHub Actions
+Unzip this archive into the root of your existing `TX-MD5-Analyzer` Git repository, overwriting old project files. Then run `git add . && git commit -m "Add MinhQuan splash and login UI" && git push origin main`. In GitHub > Actions > `Build Android APK`, download artifact `MinhQuan-debug` if the workflow is green.

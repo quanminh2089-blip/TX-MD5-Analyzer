@@ -30,6 +30,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -76,7 +77,7 @@ public class CaptureService extends Service {
             nm.createNotificationChannel(new NotificationChannel("capture","Phân tích màn hình",NotificationManager.IMPORTANCE_LOW));
             Notification note=new Notification.Builder(this,"capture")
                     .setSmallIcon(android.R.drawable.ic_menu_view)
-                    .setContentTitle("TX MD5 Analyzer đang nhận diện")
+                    .setContentTitle("MinhQuan đang nhận diện")
                     .setContentText("Phân tích trên thiết bị • Mở ứng dụng để dừng")
                     .setOngoing(true).build();
             if(Build.VERSION.SDK_INT>=29)startForeground(100,note,ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
@@ -270,13 +271,17 @@ public class CaptureService extends Service {
         root=new FrameLayout(this);
         bubble=new LinearLayout(this);bubble.setGravity(Gravity.CENTER);
         bubble.setBackground(bg(Color.rgb(25,57,99),40));bubble.setElevation(dp(8));
-        TextView logo=tv("TX",16,Color.WHITE);logo.setGravity(Gravity.CENTER);logo.setTypeface(null,1);
-        bubble.addView(logo);
+        ImageView logo=new ImageView(this);
+        logo.setImageResource(R.drawable.minhquan_avatar);
+        logo.setContentDescription("Mở thống kê MinhQuan");
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        logo.setPadding(dp(2),dp(2),dp(2),dp(2));
+        bubble.addView(logo,new LinearLayout.LayoutParams(dp(54),dp(54)));
         FrameLayout.LayoutParams bp=new FrameLayout.LayoutParams(dp(54),dp(54));
         root.addView(bubble,bp);
         panel=new LinearLayout(this);panel.setPadding(dp(15),dp(13),dp(15),dp(14));panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackground(bg(Color.argb(247,18,28,48),18));panel.setElevation(dp(10));
-        TextView title=tv("TX MD5   •   LIVE     −",16,Color.WHITE);title.setTypeface(null,1);
+        TextView title=tv("MINHQUAN   •   LIVE     −",16,Color.WHITE);title.setTypeface(null,1);
         title.setPadding(0,0,0,dp(10));panel.addView(title);
         status=tv("● Đang chờ cấp quyền màn hình",12,Color.rgb(105,226,165));
         panel.addView(status);

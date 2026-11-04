@@ -31,6 +31,6 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: TX-MD5-Analyzer-debug
+          name: MinhQuan-debug
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
