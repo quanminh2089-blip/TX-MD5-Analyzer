@@ -4,9 +4,11 @@ var camera: Camera3D
 var weapon_rig: Node3D
 var weapon: Node3D
 var world: Node3D
-var health: float = 100.0
+const MAX_HEALTH: float = 500.0
+const BULLET_DAMAGE: float = 10.0
+var health: float = MAX_HEALTH
 var ammo: int = 30
-var reserve: int = 180
+var reserve: int = 900
 var cooldown: float = 0.0
 var reload_time: float = 0.0
 var recoil: float = 0.0
@@ -17,6 +19,10 @@ var aiming: bool = false
 var running: bool = false
 var fire_held: bool = false
 var crouching: bool = false
+var lean_direction: int = 0 # -1 trai / 0 dung / 1 phai
+var lean_amount: float = 0.0
+const LEAN_DISTANCE: float = 0.38
+const LEAN_ANGLE: float = 0.20
 var body_shape: CollisionShape3D
 var recoil_pitch: float = 0.0
 var recoil_yaw: float = 0.0
@@ -100,6 +106,8 @@ func _unhandled_input(event: InputEvent) -> void :
 		if event.physical_keycode == KEY_SPACE:
 			jump()
 		if event.physical_keycode == KEY_C: toggle_crouch()
+		if event.physical_keycode == KEY_Q: toggle_lean(-1)
+		if event.physical_keycode == KEY_E: toggle_lean(1)
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		aiming = event.pressed
 
@@ -151,10 +159,29 @@ func _physics_process(delta: float) -> void :
 	look_sway = look_sway.lerp(Vector2.ZERO, 1 - exp( - delta * 12))
 	var bob = sin(walk_phase) * 0.014 * Game.camera_motion if moving else 0.0
 	camera.position.y = lerpf(camera.position.y, (1.02 if crouching else 1.65) + bob, 1 - exp( - delta * 12))
+	# Nghiêng người kiểu shooter: dịch điểm ngắm sang ngang và nghiêng góc camera.
+	# Quét va chạm để camera không xuyên qua tường khi tựa sát vật cản.
+	var lean_target: float = float(lean_direction) * LEAN_DISTANCE
+	if absf(lean_target) > 0.01:
+		var from: Vector3 = global_position + Vector3.UP * (1.02 if crouching else 1.65)
+		var to: Vector3 = from + global_basis.x * lean_target
+		var query := PhysicsRayQueryParameters3D.create(from, to, 1)
+		query.exclude = [get_rid()]
+		var wall_hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+		if not wall_hit.is_empty():
+			lean_target = signf(lean_target) * maxf(0.0, from.distance_to(wall_hit.position) - 0.1)
+	lean_amount = lerpf(lean_amount, lean_target, 1.0 - exp(-delta * 13.0))
+	camera.position.x = lean_amount
 	camera.rotation.x = clampf(pitch + recoil_pitch, -1.4, 1.4)
 	camera.rotation.y = recoil_yaw
-	camera.rotation.z = lerpf(camera.rotation.z, - input_dir.x * 0.012 * Game.camera_motion, 1 - exp( - delta * 10))
+	camera.rotation.z = lerpf(camera.rotation.z, -input_dir.x * 0.012 * Game.camera_motion - lean_amount / LEAN_DISTANCE * LEAN_ANGLE, 1 - exp(-delta * 13.0))
 	camera.fov = lerpf(camera.fov, 48.0 if aiming and reload_time <= 0 else (81.0 if sprint and moving else (71.0 if fire_held else 75.0)), 1 - exp( - delta * 12))
+
+func toggle_lean(side: int) -> void:
+	if not world.playing or health <= 0:
+		return
+	side = clampi(side, -1, 1)
+	lean_direction = 0 if side == lean_direction else side
 
 func toggle_crouch() -> bool:
 	if not world.playing: return false
@@ -191,7 +218,7 @@ func heal() -> bool:
 	if medkits <= 0:
 		Game.hud.notify("Đã hết túi cứu thương", 1.3)
 		return false
-	if health >= 100:
+	if health >= MAX_HEALTH:
 		Game.hud.notify("Máu đã đầy", 1.1)
 		return false
 	if move_input.length() > 0.2 or fire_held:
@@ -210,13 +237,16 @@ func _heal_step(delta: float) -> void :
 		return
 	heal_time = maxf(0, heal_time - delta)
 	if heal_time <= 0:
-		health = minf(100, health + 45)
+		health = minf(MAX_HEALTH, health + 45)
 		medkits -= 1
 		Game.hud.notify("+45 máu", 1.2)
 
 func reset_mobile_state() -> void :
 	crouching = false
+	lean_direction = 0
+	lean_amount = 0.0
 	_apply_stance()
+	camera.position.x = 0.0
 	camera.position.y = 1.65
 	camera.fov = 75
 	camera.rotation = Vector3.ZERO
@@ -272,7 +302,7 @@ func shoot() -> void :
 	if not hit.is_empty():
 		if hit.collider.has_method("take_hit"):
 			var headshot: bool = hit.position.y - hit.collider.global_position.y > 1.35
-			hit.collider.take_hit(65 if headshot else 34, headshot)
+			hit.collider.take_hit(int(BULLET_DAMAGE), headshot)
 			Game.hud.show_hit(headshot)
 		world.impact(hit.position, hit.normal)
 
@@ -282,7 +312,7 @@ func shoot() -> void :
 func take_damage(_amount: float, source: Vector3 = Vector3.INF, killer: String = "ĐỘI ĐỎ") -> void :
 	if health <= 0 or not world.playing:
 		return
-	health = 0
+	health = maxf(0.0, health - maxf(_amount, 0.0))
 	hurt_time = 0.6
 	heal_time = 0
 	Game.hud.damage_flash()

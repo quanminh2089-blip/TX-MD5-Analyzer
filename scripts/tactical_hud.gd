@@ -18,6 +18,8 @@ var cached_layout: Dictionary = {}
 var cached_size = Vector2.ZERO
 var cached_scale = -1.0
 var cached_left_fire = false
+var cached_custom: Dictionary = {}
+var editor: Control
 var ammo_fx = 0.0
 var score_fx = 0.0
 var ammo_snapshot = -1
@@ -64,7 +66,7 @@ func _process(delta: float) -> void :
 		_sync_movement()
 	for action in control_positions().keys() + ["ammo"]:
 		press_fx[action] = maxf(0, float(press_fx.get(action, 0)) - delta * 3.8)
-		var active: bool = touches.values().has(action) or (action == "aim" and world.player.aiming) or (action == "crouch" and world.player.crouching) or (action == "run" and sprint_locked) or (action == "heal" and world.player.heal_time > 0)
+		var active: bool = touches.values().has(action) or (action == "lean_left" and world.player.lean_direction == -1) or (action == "lean_right" and world.player.lean_direction == 1) or (action == "aim" and world.player.aiming) or (action == "crouch" and world.player.crouching) or (action == "run" and sprint_locked) or (action == "heal" and world.player.heal_time > 0)
 		held_fx[action] = move_toward(float(held_fx.get(action, 0)), 1.0 if active else 0.0, delta * 9)
 
 func _place(full: bool) -> void :
@@ -112,7 +114,7 @@ func _main_menu() -> void :
 	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	brand.add_child(title)
 	panel.add_child(brand)
-	panel.add_child(UI.label("1 ĐẤU 4  •  MỘT PHÁT HẠ GỤC  •  CHẠM 4 ĐIỂM", 13, Color("91a0a8")))
+	panel.add_child(UI.label("1 ĐẤU 4  •  500 MÁU  •  MỖI VIÊN -10  •  CHẠM 4 ĐIỂM", 13, Color("91a0a8")))
 	var line: = HSeparator.new()
 	panel.add_child(line)
 	panel.add_child(UI.label("THUNG LŨNG — TRẠM 04\nHạ cả 4 đối thủ để thắng ván. Dùng vật chắn để sống sót.", 16, Color("bac2c6")))
@@ -199,6 +201,14 @@ func _settings() -> void :
 				Game.apply_settings())
 			body.add_child(UI.label("Chọn THẤP nếu máy nóng hoặc chuyển động chưa mượt.", 14, Color("8f9ca4")))
 		1:
+			body.add_child(UI.label("BỐ CỤC NGHIÊNG TRÁI / PHẢI", 13, UI.GOLD))
+			body.add_child(UI.label("Nút nghiêng nằm ngay phía trên joystick. Chạm một lần để nghiêng, chạm lại để đứng thẳng.", 15, Color("9ca9af")))
+			var edit_button := Button.new()
+			edit_button.text = "✥  TÙY CHỈNH VỊ TRÍ NÚT (KÉO & THẢ)"
+			edit_button.custom_minimum_size.y = 60
+			edit_button.add_theme_stylebox_override("normal", UI.box(Color("294e4f"), 6, Color("54d2ba")))
+			edit_button.pressed.connect(_edit_controls)
+			body.add_child(edit_button)
 			_slider(body, "Cỡ nút bấm", Game.control_scale, 0.85, 1.2, 0.05, func(value: float):
 				Game.control_scale = value
 				Game.apply_settings())
@@ -224,6 +234,8 @@ func _settings() -> void :
 				Game.left_fire = true
 				Game.floating_joystick = false
 				Game.auto_sprint = true
+				Game.custom_controls.clear()
+				cached_layout.clear()
 				Game.apply_settings()
 				_settings())
 			body.add_child(reset)
@@ -255,6 +267,17 @@ func _settings() -> void :
 				Game.apply_settings())
 			body.add_child(UI.label("Âm thanh súng, bước chân và thao tác được xử lý riêng.\nChỉnh âm lượng bằng phím âm lượng trên điện thoại.", 15, Color("9ca9af")))
 	_button("ÁP DỤNG & QUAY LẠI", _pause_menu if was_playing else _main_menu)
+
+func _edit_controls() -> void:
+	if is_instance_valid(editor):
+		return
+	# Giữ nguyên thế giới đang tạm dừng, nhưng cho phép kéo các nút trên HUD.
+	overlay.hide()
+	editor = Control.new()
+	editor.set_script(preload("res://scripts/control_layout_editor.gd"))
+	editor.hud = self
+	root.add_child(editor)
+	editor.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 func _check(parent: Control, text: String, value: bool, callback: Callable) -> void :
 	var check: = CheckButton.new()
@@ -291,7 +314,7 @@ func _credits() -> void :
 	_make_panel()
 	panel.get_parent().custom_minimum_size.x = 900
 	panel.add_child(UI.label("ĐIỀU KHIỂN & NGUỒN TÀI NGUYÊN", 25))
-	panel.add_child(UI.label("1 bạn đấu 4 NPC. Một phát trúng là bị loại.\nHạ hết đội kia: +1 điểm. Đội chạm 4 điểm thắng trận.\nJoystick trái: đi. Cần phải: giữ bắn, kéo để ngắm.\nChạm ô súng phía trên phải để nạp đạn.\nCác nút giữa dưới: CÚI / NHẢY.\nNPC nghe tiếng súng, tìm đường và bắn khi nhìn thấy bạn.", 17))
+	panel.add_child(UI.label("1 bạn đấu 4 NPC. Mỗi bên 500 HP, một viên gây 10 sát thương.\nHạ hết đội kia: +1 điểm. Đội chạm 4 điểm thắng trận.\nJoystick trái: đi. Cần phải: giữ bắn, kéo để ngắm.\nChạm ô súng phía trên phải để nạp đạn.\nCác nút giữa dưới: CÚI / NHẢY.\nNPC nghe tiếng súng, tìm đường và bắn khi nhìn thấy bạn.", 17))
 	panel.add_child(UI.label("MODEL / VẬT LIỆU", 13, UI.GOLD))
 	panel.add_child(UI.label("MP5: Rotuma  •  Tay FPS: DJMaesen / bumstrum, rig ccransh\nỐng ngắm: Argentavisss  •  Nhân vật: BAMEN\nHoạt ảnh: Quaternius, 100STYLE  •  Đá / PBR: Poly Haven\nCây: musdasch / Yughues / para (OpenGameArt).\nCC BY 4.0 / CC0. Chi tiết nguồn nằm trong mã nguồn.", 14, Color("a5afb5")))
 	_button("QUAY LẠI", _main_menu)
@@ -310,11 +333,12 @@ func show_match_result(won: bool) -> void :
 
 func layout() -> Dictionary:
 	var view = root.size if root.size.x > 0 else get_viewport().get_visible_rect().size
-	if cached_layout.is_empty() or view != cached_size or Game.control_scale != cached_scale or Game.left_fire != cached_left_fire:
+	if cached_layout.is_empty() or view != cached_size or Game.control_scale != cached_scale or Game.left_fire != cached_left_fire or Game.custom_controls != cached_custom:
 		cached_size = view
 		cached_scale = Game.control_scale
 		cached_left_fire = Game.left_fire
-		cached_layout = Layout.build(view, Game.control_scale, Game.left_fire, safe_insets)
+		cached_custom = Game.custom_controls.duplicate(true)
+		cached_layout = Layout.build(view, Game.control_scale, Game.left_fire, safe_insets, Game.custom_controls)
 	return cached_layout
 
 func _safe_area() -> void :
@@ -407,6 +431,8 @@ func _input(event: InputEvent) -> void :
 			elif action == "jump": world.player.jump()
 			elif action == "ammo": world.player.reload_weapon()
 			elif action == "crouch": world.player.toggle_crouch()
+			elif action == "lean_left": world.player.toggle_lean(-1)
+			elif action == "lean_right": world.player.toggle_lean(1)
 			elif action == "run":
 				sprint_locked = not sprint_locked
 				if sprint_locked:

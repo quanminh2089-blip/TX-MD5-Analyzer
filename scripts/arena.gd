@@ -102,9 +102,9 @@ func start_run() -> void :
 func _next_round() -> void :
 	playing = false;round_number += 1;elapsed = 0;round_kills = 0;round_winner = -1
 	for effect in effects.get_children(): effect.queue_free()
-	player.position = PLAYER_SPAWN;player.rotation = Vector3.ZERO;player.pitch = 0;player.velocity = Vector3.ZERO;player.health = 100;player.ammo = player.MAG_SIZE;player.reserve = 180;player.reload_time = 0
+	player.position = PLAYER_SPAWN;player.rotation = Vector3.ZERO;player.pitch = 0;player.velocity = Vector3.ZERO;player.health = player.MAX_HEALTH;player.ammo = player.MAG_SIZE;player.reserve = 900;player.reload_time = 0
 	player.reset_mobile_state();player.medkits = 0;player.weapon_rig.reset_parts();player.camera.current = true
-	_spawn_team();phase = Phase.COUNTDOWN;phase_time = 3.0;Game.hud.start_game();Game.hud.notify("Một phát trúng là bị loại. Đội chạm 4 điểm thắng.", 3)
+	_spawn_team();phase = Phase.COUNTDOWN;phase_time = 3.0;Game.hud.start_game();Game.hud.notify("500 HP mỗi bên • Trúng đạn -10 HP • Chạm 4 điểm thắng.", 3)
 func begin_live() -> void :
 	if phase != Phase.COUNTDOWN or paused: return
 	phase = Phase.LIVE;phase_time = 0;playing = true;Game.hud.clear_controls()
@@ -121,7 +121,7 @@ func _process(delta: float) -> void :
 			else: _next_round()
 	elif phase == Phase.LIVE:
 		elapsed += delta;total_elapsed += delta
-		if player.global_position.y < -5: player.take_damage(1)
+		if player.global_position.y < -5: player.take_damage(player.MAX_HEALTH)
 func end_round(winner: int) -> void :
 	if phase != Phase.LIVE or not playing: return
 	playing = false;phase = Phase.ROUND_OVER;round_winner = winner;score[winner] += 1;round_history.append(winner);phase_time = 3.0;Game.hud.clear_controls()

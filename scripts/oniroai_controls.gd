@@ -45,6 +45,8 @@ func _draw() -> void :
 		draw_arc(center, 83, bearing - 0.24, bearing + 0.24, 24, Color(1, 0.28, 0.15, minf(hud.damage_time, 0.85)), 4, true)
 	_scoreboard()
 	_ammo_card()
+	_health_bar()
+	_enemy_health_bars()
 	_joystick()
 	for action in hud.control_positions(): _button(action, hud.control_positions()[action])
 	for i in range(hud.kill_feed.size()):
@@ -93,6 +95,28 @@ func _ammo_card() -> void :
 	if player.reload_time > 0:
 		var value = clampf(1 - player.reload_time / player.RELOAD_DURATION, 0, 1)
 		picture("rail", Rect2(card.position + Vector2(34, 100) * u, Vector2(250 * value, 3) * u), 0.9, BLUE)
+func _health_bar() -> void :
+	var player = hud.world.player
+	var p: Vector2 = hud.layout().safe.position + Vector2(0, 86)
+	var total: float = player.MAX_HEALTH
+	draw_rect(Rect2(p, Vector2(223, 50)), Color(0.035, 0.055, 0.073, 0.85))
+	text("MÁU  %03d / %03d" % [ceili(player.health), int(total)], p + Vector2(10, 22), 16, WHITE)
+	draw_rect(Rect2(p + Vector2(10, 32), Vector2(203, 8)), Color("36434a"))
+	draw_rect(Rect2(p + Vector2(10, 32), Vector2(203 * clampf(player.health / total, 0, 1), 8)), BLUE if player.health > 100 else Color("ee655a"))
+
+func _enemy_health_bars() -> void :
+	if not hud.world.playing: return
+	var camera: Camera3D = hud.world.player.camera
+	for enemy in hud.world.enemies.get_children():
+		if enemy.dead or enemy.health == enemy.MAX_HEALTH or not enemy.visible_target: continue
+		var at: Vector3 = enemy.global_position + Vector3.UP * 2.12
+		if camera.is_position_behind(at) or camera.global_position.distance_to(at) > 38: continue
+		var p: Vector2 = camera.unproject_position(at)
+		if not Rect2(Vector2.ZERO, size).has_point(p): continue
+		draw_rect(Rect2(p + Vector2(-38, -14), Vector2(76, 7)), Color("20272d"))
+		draw_rect(Rect2(p + Vector2(-38, -14), Vector2(76 * float(enemy.health) / float(enemy.MAX_HEALTH), 7)), Color("e99873"))
+		text("%d / 500" % enemy.health, p + Vector2(0, -20), 11, WHITE, true)
+
 func _scope(center: Vector2, blend: float) -> void :
 
 	var color = Color("e38d56");color.a = blend
@@ -114,6 +138,19 @@ func _button(action: String, p: Vector2) -> void :
 		disc("fire_base", p, r, alpha)
 		var thumb: Vector2 = p + hud.visual_fire * r * 0.54 + Vector2(0, active * 2)
 		disc("fire_thumb", thumb, r * (0.44 - active * 0.025), alpha, Color.WHITE.lerp(Color("ffe2b0"), active * 0.25))
+		return
+	if action == "lean_left" or action == "lean_right":
+		var direction: float = -1.0 if action == "lean_left" else 1.0
+		var selected = (hud.world.player.lean_direction == -1 and action == "lean_left") or (hud.world.player.lean_direction == 1 and action == "lean_right")
+		var tone: Color = BLUE if selected else WHITE
+		draw_circle(p, r, Color(0.025, 0.045, 0.06, alpha * 0.85))
+		draw_arc(p, r - 2, 0, TAU, 56, tone, 2.8 if selected else 1.7, true)
+		draw_circle(p + Vector2(direction * 8, -12), 5.3, tone)
+		draw_line(p + Vector2(direction * 8, -5), p + Vector2(-direction * 2, 12), tone, 4, true)
+		draw_line(p + Vector2(-direction * 2, 12), p + Vector2(-direction * 11, 17), tone, 3, true)
+		draw_line(p + Vector2(-direction * 2, 12), p + Vector2(direction * 9, 17), tone, 3, true)
+		draw_line(p + Vector2(direction * 3, 1), p + Vector2(direction * 16, 0), tone, 2.6, true)
+		text("NGHIÊNG TRÁI" if action == "lean_left" else "NGHIÊNG PHẢI", p + Vector2(0, r + 14), 11, tone, true)
 		return
 	var id = "fire_thumb" if action == "fire_left" else action
 	var pulse: float = hud.press_fx.get(action, 0)

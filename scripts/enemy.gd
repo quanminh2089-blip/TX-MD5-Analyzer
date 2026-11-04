@@ -3,7 +3,9 @@ var world: Node3D
 var player: CharacterBody3D
 var bot_id = 0
 var bot_name = ""
-var health = 100
+const MAX_HEALTH: int = 500
+const BULLET_DAMAGE: int = 10
+var health: int = MAX_HEALTH
 var dead = false
 var visual: Node3D
 var anim: AnimationPlayer
@@ -147,13 +149,20 @@ func fire_at(target: Vector3, spread_override: float = -1) -> bool:
 	world.tracer(from, end, true);last_hit_player = not hit.is_empty() and hit.collider == player
 	if not hit.is_empty():
 		world.impact(hit.position, hit.normal)
-		if last_hit_player: player.take_damage(100, global_position, bot_name)
+		if last_hit_player: player.take_damage(BULLET_DAMAGE, global_position, bot_name)
 	return last_hit_player
 func reload_weapon() -> void :
 	if dead or reload_time > 0 or reserve <= 0 or ammo == MAG_SIZE: return
 	reload_time = RELOAD_DURATION;_animation("reload");sound.stream = Game.asset("rifle_magout.ogg");sound.play()
 func take_hit(_amount: int, headshot: bool = false) -> void :
 	if dead or not world.playing: return
-	health = 0;dead = true;collision_layer = 0;collision_mask = 0;velocity = Vector3.ZERO
+	health = maxi(0, health - maxi(_amount, 0))
+	if health > 0:
+		# Không biến mất ở phát bắn đầu tiên; chỉ chết khi hết 500 HP.
+		if sound:
+			sound.stream = Game.asset("enemy_hurt.ogg")
+			sound.play()
+		return
+	dead = true;collision_layer = 0;collision_mask = 0;velocity = Vector3.ZERO
 	for ik in ik_solvers: ik.stop()
 	_animation("death");sound.stream = Game.asset("enemy_destroy.ogg");sound.play();gun.hide();world.enemy_killed(global_position, headshot, bot_name)

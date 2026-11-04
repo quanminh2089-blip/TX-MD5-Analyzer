@@ -1,6 +1,6 @@
 extends Node
 
-const VERSION = "0.5.0"
+const VERSION = "1.2.0"
 var bot_difficulty = 1
 var matches_played = 0
 var match_wins = 0
@@ -18,6 +18,8 @@ var left_fire: bool = true
 var floating_joystick: bool = false
 var auto_sprint: bool = true
 var camera_motion: float = 0.45
+# Vi tri cac nut normalized vao safe area, tuong thich nhieu ti le man hinh.
+var custom_controls: Dictionary = {}
 var session_kills: int = 0
 var session_time: float = 0.0
 var hud: CanvasLayer
@@ -64,6 +66,9 @@ func _ready() -> void :
 	floating_joystick = bool(settings.get_value("mobile", "floating_joystick", false))
 	auto_sprint = bool(settings.get_value("mobile", "auto_sprint", true))
 	camera_motion = clampf(float(settings.get_value("mobile", "camera_motion", 0.45)), 0, 1)
+	var saved_positions: Variant = settings.get_value("mobile", "control_positions", {})
+	if saved_positions is Dictionary:
+		custom_controls = saved_positions.duplicate(true)
 	if int(settings.get_value("game", "settings_version", 0)) < 2:
 		quality = 1
 		control_opacity = 0.82
@@ -88,6 +93,7 @@ func apply_settings() -> void :
 	settings.set_value("mobile", "floating_joystick", floating_joystick)
 	settings.set_value("mobile", "auto_sprint", auto_sprint)
 	settings.set_value("mobile", "camera_motion", camera_motion)
+	settings.set_value("mobile", "control_positions", custom_controls)
 	settings.set_value("rounds", "difficulty", bot_difficulty)
 	settings.set_value("rounds", "played", matches_played)
 	settings.set_value("rounds", "wins", match_wins)

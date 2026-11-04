@@ -55,7 +55,7 @@ func _draw() -> void :
 	draw_style_box(load_box(), Rect2(info, Vector2(252, 87)))
 	text("ĐỘI XANH  /  1 NGƯỜI", info + Vector2(14, 22), 12, Color("91cce6"))
 	text("CÒN SỐNG" if player.health > 0 else "ĐÃ BỊ LOẠI", info + Vector2(14, 50), 23, WHITE)
-	text("MỘT PHÁT TRÚNG = BỊ LOẠI", info + Vector2(14, 73), 11, MUTED)
+	text("500 HP • TRÚNG ĐẠN -10", info + Vector2(14, 73), 11, MUTED)
 	text("THUNG LŨNG  /  TRẠM 04", info + Vector2(8, 109), 12, MUTED)
 	text("%02d:%02d" % [int(world.elapsed) / 60, int(world.elapsed) % 60], info + Vector2(8, 131), 15, WHITE)
 	_scoreboard(area)
@@ -104,7 +104,7 @@ func _phase_overlay(center: Vector2) -> void :
 		var p = center + Vector2(0, -45)
 		text("VÁN %d  /  CHUẨN BỊ" % world.round_number, p + Vector2(0, -44), 16, ACCENT, true)
 		text(str(maxi(1, ceili(world.phase_time))), p + Vector2(0, 40), 82, WHITE, true)
-		text("Hạ cả 4 đối thủ. Một phát trúng là bị loại.", p + Vector2(0, 83), 16, WHITE, true)
+		text("Hạ cả 4 đối thủ. Mỗi viên đạn gây 10 sát thương.", p + Vector2(0, 83), 16, WHITE, true)
 	elif world.phase == world.Phase.ROUND_OVER:
 		var p = center + Vector2(-285, -108)
 		draw_style_box(load_box(), Rect2(p, Vector2(570, 178)))
