@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
         ImageView picture=new ImageView(this);
         picture.setImageResource(R.drawable.minhquan_avatar);
         picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        picture.setContentDescription("Avatar MinhQuan - mặt nạ chiến binh");
+        picture.setContentDescription("Avatar MinhQuan - mặt nạ xanh");
         picture.setLayoutParams(new LinearLayout.LayoutParams(dp(sizeDp),dp(sizeDp)));
         return picture;
     }
@@ -75,33 +75,64 @@ public class MainActivity extends Activity {
         showSplash();
         ui.postDelayed(openLogin,SPLASH_DURATION_MS);
     }
+    /** Small floating loading card matching the user's reference (within app, not over game).
+     * The 3-second timer is an intro animation, not a real network request. */
     private void showSplash(){
         FrameLayout root=new FrameLayout(this);
-        root.setBackgroundColor(NAVY);
-        LinearLayout group=new LinearLayout(this);group.setGravity(Gravity.CENTER);group.setOrientation(LinearLayout.VERTICAL);
-        FrameLayout.LayoutParams place=new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER);
-        root.addView(group,place);
-        FrameLayout halo=new FrameLayout(this);
-        GradientDrawable glow=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{0xff234865,0xff0d182a,0xff332718});
-        glow.setShape(GradientDrawable.OVAL);halo.setBackground(glow);
-        group.addView(halo,new LinearLayout.LayoutParams(dp(190),dp(190)));
-        ImageView rotating=new ImageView(this);rotating.setImageResource(R.drawable.minhquan_avatar);
+        root.setBackgroundColor(Color.BLACK);
+
+        // Warm bronze logo behind the compact centered loading popup, like the reference layout.
+        LinearLayout brand=new LinearLayout(this);
+        brand.setGravity(Gravity.CENTER);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        TextView word=text("MINHQUAN",34,0xffb98865);
+        word.setGravity(Gravity.CENTER);
+        word.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        word.setLetterSpacing(.12f);
+        brand.addView(word,new LinearLayout.LayoutParams(-2,-2));
+        TextView caption=text("MD5 ANALYZER",11,0xffb99c84);
+        caption.setGravity(Gravity.CENTER);
+        caption.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        caption.setLetterSpacing(.25f);
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-2,-2);
+        cp.topMargin=dp(2);
+        brand.addView(caption,cp);
+        root.addView(brand,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
+
+        // The entire progress box is deliberately small: 174 x 100 dp.
+        LinearLayout loading=new LinearLayout(this);
+        loading.setOrientation(LinearLayout.VERTICAL);
+        loading.setGravity(Gravity.CENTER_HORIZONTAL);
+        loading.setPadding(dp(8),dp(11),dp(8),dp(9));
+        loading.setBackground(rounded(0xff302a29,10));
+        loading.setElevation(dp(10));
+        FrameLayout.LayoutParams card=new FrameLayout.LayoutParams(dp(174),dp(100),Gravity.CENTER);
+        root.addView(loading,card);
+
+        FrameLayout avatarHolder=new FrameLayout(this);
+        LinearLayout.LayoutParams holderParams=new LinearLayout.LayoutParams(dp(46),dp(46));
+        loading.addView(avatarHolder,holderParams);
+        ImageView rotating=new ImageView(this);
+        rotating.setImageResource(R.drawable.minhquan_avatar);
         rotating.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        rotating.setContentDescription("Biểu tượng MinhQuan đang xoay");
-        FrameLayout.LayoutParams pic=new FrameLayout.LayoutParams(dp(158),dp(158),Gravity.CENTER);
-        halo.addView(rotating,pic);
-        TextView name=text("MINHQUAN",29,Color.WHITE);name.setGravity(Gravity.CENTER);name.setLetterSpacing(.13f);
-        name.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,-2);np.topMargin=dp(26);group.addView(name,np);
-        TextView message=text("ĐANG KHỞI ĐỘNG",11,GOLD);message.setLetterSpacing(.18f);message.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,-2);mp.topMargin=dp(9);group.addView(message,mp);
-        TextView privacy=text("Trình đọc lịch sử • Phân tích trên thiết bị",12,SUBTLE);
-        privacy.setGravity(Gravity.CENTER);LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,-2);pp.topMargin=dp(15);group.addView(privacy,pp);
+        rotating.setContentDescription("Ảnh mặt nạ xanh MinhQuan đang xoay");
+        avatarHolder.addView(rotating,new FrameLayout.LayoutParams(-1,-1,Gravity.CENTER));
+
+        TextView message=text("Loading data from Server...",10.5f,0xfff0e8e4);
+        message.setSingleLine(true);
+        message.setGravity(Gravity.CENTER);
+        message.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+        message.setIncludeFontPadding(false);
+        LinearLayout.LayoutParams label=new LinearLayout.LayoutParams(-1,dp(20));
+        label.topMargin=dp(8);
+        loading.addView(message,label);
+        // Text imitates reference presentation only; the app does not contact a server.
         setContentView(root);
         spin=ObjectAnimator.ofFloat(rotating,"rotation",0f,360f);
-        spin.setDuration(1200);
+        spin.setDuration(1450);
         spin.setRepeatCount(ObjectAnimator.INFINITE);
-        spin.setInterpolator(new android.view.animation.LinearInterpolator());spin.start();
+        spin.setInterpolator(new android.view.animation.LinearInterpolator());
+        spin.start();
     }
     private void renderDashboard(){
         if(spin!=null){spin.cancel();spin=null;}

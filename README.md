@@ -1,20 +1,32 @@
-# MinhQuan — Android v0.4 (Source)
+# MinhQuan v0.5 (Android)
 
-Native Android Java app, from TX-MD5-Analyzer Smart v0.2.
+Native Android project derived from TX-MD5-Analyzer Smart; unchanged package ID `com.txanalyzer` so Android can install it as an update.
 
-## Startup / icon
-- Launcher icon and round avatar: exact mask image supplied by the user, centered/cropped as an Android image resource.
-- Animated splash: circular avatar rotating for **3 seconds**, then a small dark key window **centered within the app** (not a third-party floating permission overlay).
-- Reference-style compact key dialog titled **MinhQuan'z**, 278dp wide, warm charcoal background, dark single-line field, red **Get Key** / blue **OK**. The `- 18s` label is visual only, not a countdown.
-- Free **offline demo key**: `FreeKey_MinhQuan`; tap **Get Key** to auto-fill, then tap **OK**. This local UI demo is **not** secure authentication, does not contact a server, and is not a subscription/license system.
-- After that: start screen-reading, stop, or open the history-reading bubble with user-granted Android overlay and MediaProjection permissions.
-- The capture service remains the Smart v0.2 automatic history reader (ML Kit OCR and chip detection).
+## UI changes in v0.5
 
-## Android privacy and limitations
-- Only captures after user manually approves Android screen-sharing permissions.
-- No login to the game, network/key checking, or app-injection. No automated betting.
-- Recognizes past visible results. No guarantee it predicts future dice outcomes from MD5.
-- The screen-rotation/detection logic needs device testing, and real APK compilation has not been verified here.
+- Uses the supplied green hooded mask image (1000080922.png) as launcher icon, dashboard icon, floating bubble icon and startup avatar.
+- Startup has a small dark **174dp × 100dp** loading popup centered against a black screen with a bronze **MINHQUAN** wordmark behind it, based on the supplied reference.
+- Round avatar in popup rotates for **3 seconds**; afterward the existing small **MinhQuan'z** key dialog opens.
+- The visible phrase `Loading data from Server...` matches the reference but is *decorative only*. No network connection, download, or remote key check takes place.
+- App theme uses dark launch background to reduce white flashing on Android 12+.
+- Demo key remains `FreeKey_MinhQuan` (tap Get Key to fill), no real licensing/activation.
+- Existing user-consented screen capture, OCR, history reading and floating bubble have not been intentionally changed.
 
-## Build APK using GitHub Actions
-Unzip this archive into the root of your existing `TX-MD5-Analyzer` Git repository, overwriting old project files. Then run `git add . && git commit -m "Add MinhQuan splash and login UI" && git push origin main`. In GitHub > Actions > `Build Android APK`, download artifact `MinhQuan-debug` if the workflow is green.
+## Build APK on GitHub Actions
+
+In Termux after putting this zip in Downloads:
+
+```bash
+cd ~/TX-MD5-Analyzer/TX-MD5-Analyzer
+git pull --ff-only origin main
+unzip -o ~/storage/downloads/MinhQuan-Android-v0.5-source.zip -d .
+git add .
+git commit -m "MinhQuan v0.5 compact loading and green avatar"
+git push origin main
+```
+
+Go to `https://github.com/quanminh2089-blip/TX-MD5-Analyzer/actions`, open the latest run, download artifact `TX-MD5-Analyzer-debug` if it succeeds.
+
+## Limitations
+
+This ZIP contains source files; it is not an APK. No local Android SDK was available to compile or test it. A GitHub Actions build and on-device test are required. OCR-based statistics cannot predict fair random game outcomes or reveal an unknown MD5 preimage.
