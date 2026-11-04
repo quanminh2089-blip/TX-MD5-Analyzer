@@ -1,16 +1,13 @@
-# MinhQuan + OniRoai v0.8 (Godot 4.5.1)
+# MinhQuan + OniRoai v0.9 — Godot 4.5.1
 
-**One APK**: MinhQuan startup/key -> username/password -> real OniRoai 0.5.0 boot -> playable game.
+Giao diện **ngang**: nền tối -> hộp loading nhỏ (avatar mặt nạ xanh MinhQuan v0.7 xoay 3 giây) -> hộp key MinhQuan'z bo góc có avatar, Get Key và OK nằm ngang, đồng hồ -1s tăng liên tục -> đăng nhập với avatar -> game OniRoai gốc.
 
-- Key: `FreeKey_MinhQuan`
-- Local demo user: `MinhQuan08`
-- Local demo password: `08112008ok`
-- The game source and assets come from the supplied OniRoai 0.5.0 Godot ZIP.
-- The old native Android TX-MD5-Analyzer project is **not** bundled: this is a unified Godot app to run the game in-process.
-- **Android notification from native MinhQuan v0.7 is not yet ported**; Godot needs a native Android plugin for that. No misleading notification claim.
-- The UI is an offline demo, not secure account authentication. Key and password are stored in readable client source; use a server for production.
-- The loading line is decorative; no server connections are made.
+- Key thử nghiệm: `FreeKey_MinhQuan`
+- Tên người dùng: `MinhQuan08`
+- Mật khẩu: `08112008ok`
+- Màn hình game: `res://scenes/boot.tscn`
+- Giao diện: `scripts/minhquan_gate.gd`
+- Avatar: `assets/minhquan/avatar.png`
+- APK dự kiến từ GitHub Actions: `MinhQuan-OniRoai-v0.9.apk`
 
-## Build
-Open in Godot 4.5.1 and install Android export templates, configure Android SDK/JDK, then Project > Export > Android.
-Or push the project files to GitHub and use the included workflow to export debug APK. For large files, Git LFS may be needed.
+Đây là bản mã nguồn Godot, **chưa được xác nhận build APK thành công**. Thông báo Android của app Java v0.7 chưa được tích hợp vào Godot. Tài khoản/key chỉ kiểm tra cục bộ và không an toàn cho hệ thống tài khoản thật. Dòng loading là hiệu ứng giao diện, không kết nối máy chủ.
