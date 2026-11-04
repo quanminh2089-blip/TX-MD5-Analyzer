@@ -30,8 +30,8 @@ func _ready() -> void:
     bubble.texture_normal = load("res://assets/minhquan/bubble_avatar.png")
     bubble.ignore_texture_size = true
     bubble.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-    bubble.custom_minimum_size = Vector2(58, 58)
-    bubble.size = Vector2(58, 58)
+    bubble.custom_minimum_size = Vector2(76, 76)
+    bubble.size = Vector2(76, 76)
     bubble.mouse_filter = Control.MOUSE_FILTER_STOP
     bubble.hide()
     canvas.add_child(bubble)
@@ -108,7 +108,7 @@ func _reposition() -> void:
         return
     var viewport := get_viewport().get_visible_rect().size
     if not dragging:
-        bubble.position = Vector2(maxf(12.0, viewport.x - 85.0), maxf(12.0, viewport.y * 0.37))
+        bubble.position = Vector2(maxf(12.0, viewport.x - 98.0), maxf(12.0, viewport.y * 0.37))
     popup.size = Vector2.ZERO
     popup.position = (viewport - Vector2(370, 330)) / 2.0
 

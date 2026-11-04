@@ -1,13 +1,10 @@
-# MinhQuan + OniRoai v1.0 (Godot 4.5.1)
+# OniRoai v1.1 — Android optimization trial
 
-- Giữ giao diện ngang và loading avatar MinhQuan xoay 3 giây.
-- Chỉ nhập key `FreeKey_MinhQuan`, bỏ màn hình đăng nhập tài khoản.
-- Đổi placeholder thành `Nhập Key`.
-- Dưới hộp key có Admin: Nguyễn Minh Quân, Zalo: 0899174526, Telegram: @mquan08.
-- Key đúng chuyển thẳng vào game OniRoai (qua cảnh boot).
-- Trong game xuất hiện bong bóng nhỏ hình tròn dùng ảnh người dùng cung cấp `assets/minhquan/bubble_avatar.png`. Nhấn bong bóng để mở menu ở giữa màn hình.
-- ESP ĐỊCH và AIM ĐẦU **chỉ là các dòng minh họa, không có chức năng thực**.
-- Nhấn dấu ✕ hoặc vùng tối bên ngoài để đóng menu.
-- `scripts/minhquan_overlay.gd` là autoload, duy trì khi chuyển cảnh.
+- Tên ứng dụng và nhãn Android: OniRoai.
+- Giữ màn hình nhập key MinhQuan và chuyển thẳng vào game.
+- Avatar bong bóng lấy từ ảnh người dùng gửi: crop cận cảnh hơn, tăng sáng và tương phản, tăng kích thước 58 lên 76 px.
+- Giữ menu ESP ĐỊCH / AIM ĐẦU chỉ để minh họa, không hoạt động.
+- Giữ renderer GL Compatibility, giảm render scale 3D còn 70%, bóng directional shadow 2048 -> 1024, tắt MSAA và giảm lọc anisotropic.
+- APK dự kiến: output/OniRoai-v1.1.apk.
 
-Build APK bằng workflow GitHub Actions có sẵn. Chưa xác nhận build thành công hoặc chạy trên thiết bị. Key được kiểm tra cục bộ, không phải xác thực máy chủ.
+**Chưa đo FPS thực tế và chưa xác nhận APK build thành công.** 60 FPS không được bảo đảm; cần kiểm tra GPU/CPU profiler trên máy. Các tối ưu hiện tại là bước đầu, chưa bao gồm LOD/occlusion/AI profiling chuyên sâu.
