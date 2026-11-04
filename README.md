@@ -1,17 +1,16 @@
-# MinhQuan v0.7 — Android UI prototype
+# MinhQuan + OniRoai v0.8 (Godot 4.5.1)
 
-This version contains only presentation and **offline demo** login flows. No Tài/Xỉu/MD5 predictor, OCR, screen capture, overlays, real backend authentication, network port scanning or server connection.
+**One APK**: MinhQuan startup/key -> username/password -> real OniRoai 0.5.0 boot -> playable game.
 
-## Changes
-- Splash: small black-background loading card with spinning green mask avatar, 3 seconds.
-- Free demo key: `FreeKey_MinhQuan`; key dialog retains increasing counter -1s, -2s, ...
-- Account page: removed the subtitle and welcome line, added Admin / Zalo / Telegram contact details.
-- Offline demo login: The username and password specified by the owner are checked locally. Only a SHA-256 digest is embedded, not the plaintext password. This is **not secure real-user authentication**; any shipped local credential can be extracted/bypassed. Never use real secrets here.
-- Login success opens an animated hacker-style **local visual simulation**: Matrix falling characters and simulated virtual-port success messages (no actual network connections).
-- Key accepted notification: `ĐĂNG NHẬP APP THÀNH CÔNG✅` with a compact custom Android notification featuring the app avatar to the left of the message (exact appearance controlled by Android/OEM and notification settings).
+- Key: `FreeKey_MinhQuan`
+- Local demo user: `MinhQuan08`
+- Local demo password: `08112008ok`
+- The game source and assets come from the supplied OniRoai 0.5.0 Godot ZIP.
+- The old native Android TX-MD5-Analyzer project is **not** bundled: this is a unified Godot app to run the game in-process.
+- **Android notification from native MinhQuan v0.7 is not yet ported**; Godot needs a native Android plugin for that. No misleading notification claim.
+- The UI is an offline demo, not secure account authentication. Key and password are stored in readable client source; use a server for production.
+- The loading line is decorative; no server connections are made.
 
-## Build with GitHub Actions
-Upload the contents (not an extra enclosing folder) into the existing repository on main. The provided `.github/workflows/android-build.yml` builds a debug APK and uploads `MinhQuan-debug` as an artifact.
-
-## Important
-The ZIP is **source code**, not a built or device-tested APK. The custom notification may be rendered differently by different Android versions and skins. Notification permission must be granted on Android 13+ to display it.
+## Build
+Open in Godot 4.5.1 and install Android export templates, configure Android SDK/JDK, then Project > Export > Android.
+Or push the project files to GitHub and use the included workflow to export debug APK. For large files, Git LFS may be needed.
