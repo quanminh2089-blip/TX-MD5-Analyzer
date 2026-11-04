@@ -7,7 +7,7 @@ android {
         applicationId 'com.txanalyzer'
         minSdk 26
         targetSdk 35
-        versionCode 8
-        versionName '0.8.0-OverlayTest'
+        versionCode 10
+        versionName '1.0.0-BotCorePrototype'
     }
 }
