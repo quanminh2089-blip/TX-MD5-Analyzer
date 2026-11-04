@@ -990,9 +990,26 @@ body:not(.unlocked) #lock-screen-ui {touch-action:none;}
 
 #page-0 .app-grid { justify-content:flex-start; }
 </style>
-<style id="magicos-147-frame">
-#phone-container { border: 2px solid rgba(215,222,242,.65) !important; border-radius: 44px !important; overflow: hidden !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,.14), 0 0 0 2px rgba(0,0,0,.55) !important; }
-#lock-screen-wrapper::before { content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12) 50%,rgba(0,0,0,.35)); pointer-events:none; }
+<style id="magicos-148-device-frame">
+/* Black phone surround with rounded clipping, separate from Android system navigation. */
+html, body { width:100%; height:100%; background:#000 !important; overflow:hidden; }
+#phone-container {
+  position:relative !important;
+  width:calc(100% - 24px) !important;
+  height:calc(100% - 18px) !important;
+  margin:9px auto !important;
+  border:1px solid rgba(210,215,230,.23) !important;
+  border-radius:54px !important;
+  overflow:hidden !important;
+  background:#070707 !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.035), 0 12px 26px rgba(0,0,0,.7) !important;
+  isolation:isolate;
+}
+#lock-screen-wrapper::before {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12) 50%,rgba(0,0,0,.35));
+  pointer-events:none;
+}
 </style></head>
 <body>
 <div id="phone-container">

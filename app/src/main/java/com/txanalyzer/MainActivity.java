@@ -56,24 +56,20 @@ public final class MainActivity extends Activity {
         a.setContentDescription("Avatar MinhQuan");
         a.setLayoutParams(new LinearLayout.LayoutParams(dp(size),dp(size)));return a;
     }
-    // Immersive fullscreen: hide the real Android status/navigation bars.
-    // Users can temporarily reveal system bars by swiping from an edge.
-    private void immersive(){
-        getWindow().getDecorView().setSystemUiVisibility(
-            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            | android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-            | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+    // Keep Android system navigation and recent-apps gestures available.
+    private void showSystemBars() {
+        getWindow().getDecorView().setSystemUiVisibility(0);
+        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
     }
-    @Override public void onWindowFocusChanged(boolean hasFocus){
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if(hasFocus) immersive();
+        if (hasFocus) showSystemBars();
     }
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
-        immersive();
+        showSystemBars();
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
         // A key is requested on each fresh launch, like the original v0.7 screen.
@@ -167,15 +163,7 @@ public final class MainActivity extends Activity {
             w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         }
         dialog.setOnDismissListener(d->stopCounter());
-        if(dialog.getWindow()!=null){
-            dialog.getWindow().getDecorView().setSystemUiVisibility(
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                | android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
-                | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        }
+
         dialog.show();
         if(dialog.getWindow()!=null)dialog.getWindow().setLayout(dp(274),-2);
         long since=SystemClock.elapsedRealtime();
