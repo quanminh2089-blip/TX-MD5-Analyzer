@@ -1,20 +1,14 @@
-# MAGICOS Native — Giai đoạn 1 (Java Android, không HTML/WebView/Python runtime)
+# MinhQuan MAGICOS WebView v1.4
 
-Nguồn tham chiếu: file `magicos.py` do người dùng cung cấp (7.684 dòng). Đây là **bản chuyển đổi giai đoạn 1**, KHÔNG phải bản chuyển đổi toàn bộ và chưa tương đương hình ảnh/logic với nguyên bản.
+- Preserves the original rotating avatar intro and `MinhQuan'z` key dialog from v1.3, including `FreeKey_MinhQuan` and Get Key.
+- After correct key, opens the MAGICOS UI extracted from `magicos.py` inside an Android WebView. No game launch, overlay or accessibility permissions.
+- `app/src/main/assets/index.html` is the concatenation of the original MAGICOS HTML/CSS/JS source, not a redesigned mockup. `phone-app.html` is also included.
+- `magicos-original.py` retained as a source reference, not executed in the APK.
 
-## Đã hoạt động trong mã nguồn
-- Splash avatar xoay ~2,6 giây, hộp nhập key `FreeKey_MinhQuan` (key cục bộ, không có bảo mật máy chủ).
-- Màn hình khóa với đồng hồ, vuốt lên mở; màn hình chính dạng icon native, thanh trạng thái và dynamic island trang trí.
-- Trung tâm điều khiển dạng UI mô phỏng (không tự ý thay đổi Wi-Fi/Bluetooth thật).
-- Cài đặt, khóa màn hình, ghi chú lưu cục bộ, máy tính phép tính cơ bản, bàn phím điện thoại mô phỏng, MagicBank hiển thị xu mô phỏng.
-- Icon Penalty, MAGICAI, Cửa Hàng có màn hình placeholder **được ghi rõ chưa hoàn tất**.
+## Important limitations
 
-## Chưa chuyển đổi
-- Engine trò chơi Penalty/Goalkeeper gốc, tài khoản Flask, MAGICAI backend, hệ thống ngân hàng/cửa hàng/điện thoại đầy đủ, admin, nhiều animation chi tiết, động tác đa nhiệm, chức năng server Python.
-- Giao diện chưa bảo đảm giống 100% bản HTML gốc. Không chứa WebView, HTML, Python hoặc quyền overlay/Accessibility/bot.
+This is a **UI integration**, not a complete conversion of the Python backend. Features requiring `/api/unlock`, `/api/server-state`, the Flask Penalty service, or other server endpoints may not work in the offline WebView. Penalty is marked unavailable instead of faking a running server. External Font Awesome / Google Fonts need internet and may not load offline. No audio/video assets were provided in the source upload. This build has **not** been compiled or tested on an Android device.
 
 ## Build
-Push dự án mới lên GitHub (repo riêng khuyến nghị), workflow `.github/workflows/android-build.yml` chạy Gradle 8.9 + Java 17, tạo artifact `MinhQuan-debug`. Không yêu cầu Termux chạy Android Studio. Chưa chạy APK trên thiết bị thật.
 
-## Giai đoạn kế tiếp
-(2) Native lock/home/dock/dynamic island/control center theo layout gốc; (3) app điện thoại, MagicBank, Store; (4) MAGICAI, admin và dữ liệu; (5) port game Penalty từ canvas JS sang custom Canvas Android, xử lý vòng lặp và hoạt ảnh; (6) kiểm thử hồi quy, tối ưu khung hình, hoàn thiện.
+Push this source to your existing GitHub repository and use `.github/workflows/android-build.yml`. The original Java login screen was deliberately not visually modified.
